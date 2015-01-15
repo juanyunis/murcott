@@ -189,10 +189,11 @@ func (s *Session) commandLoop() {
 
 func showHelp() {
 	fmt.Println()
-	color.Printf("  * HELP *\n")
-	color.Printf("  @{Kg}/chat [ID]@{|}\tStart a chat with [ID]\n")
-	color.Printf("  @{Kg}/end      @{|}\tEnd current chat\n")
-	color.Printf("  @{Kg}/help     @{|}\tShow this message\n")
-	color.Printf("  @{Kg}/exit     @{|}\tExit this program\n")
+	color.Printf(
+		`  * HELP *
+  @{Kg}/chat [ID]@{|}	Start a chat with [ID]
+  @{Kg}/end      @{|}	End current chat
+  @{Kg}/help     @{|}	Show this message
+  @{Kg}/exit     @{|}	Exit this program`)
 	fmt.Println()
 }

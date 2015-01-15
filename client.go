@@ -12,18 +12,17 @@ import (
 )
 
 type Client struct {
-	node          *node.Node
-	msgHandler    messageHandler
-	statusHandler statusHandler
-	status        client.UserStatus
-	profile       client.UserProfile
-	id            utils.NodeID
-	Roster        *client.Roster
-	Logger        *log.Logger
+	node       *node.Node
+	msgHandler messageHandler
+	status     client.UserStatus
+	profile    client.UserProfile
+	id         utils.NodeID
+	Roster     *client.Roster
+	Logger     *log.Logger
 }
 
 type messageHandler func(src utils.NodeID, msg client.ChatMessage)
-type statusHandler func(src utils.NodeID, status client.UserStatus)
+type Message interface{}
 
 // NewClient generates a Client with the given PrivateKey.
 func NewClient(key *utils.PrivateKey, config utils.Config) (*Client, error) {
@@ -59,9 +58,6 @@ func NewClient(key *utils.PrivateKey, config utils.Config) (*Client, error) {
 			return client.UserProfileResponse{Profile: c.profile}
 		case client.UserPresence:
 			p := msg.(client.UserPresence)
-			if c.statusHandler != nil {
-				c.statusHandler(src, p.Status)
-			}
 			if !p.Ack {
 				c.node.Send(src, client.UserPresence{Status: c.status, Ack: true}, nil)
 			}
@@ -98,44 +94,8 @@ func (c *Client) HandleMessages(handler func(src utils.NodeID, msg client.ChatMe
 	c.msgHandler = handler
 }
 
-// HandleStatuses registers the given function as a status handler.
-func (c *Client) HandleStatuses(handler func(src utils.NodeID, status client.UserStatus)) {
-	c.statusHandler = handler
-}
-
-// Requests a user profile to the destination node.
-// If no response is received from the node, RequestProfile tries to load a profile from the cache.
-func (c *Client) RequestProfile(dst utils.NodeID, f func(profile *client.UserProfile)) {
-	c.node.Send(dst, client.UserProfileRequest{}, func(r interface{}) {
-		if p, ok := r.(client.UserProfileResponse); ok {
-			f(&p.Profile)
-		} else {
-			f(nil)
-		}
-	})
-}
-
 func (c *Client) ID() utils.NodeID {
 	return c.id
-}
-
-func (c *Client) Status() client.UserStatus {
-	return c.status
-}
-
-func (c *Client) SetStatus(status client.UserStatus) {
-	c.status = status
-	for _, n := range c.Roster.List() {
-		c.node.Send(n, client.UserPresence{Status: c.status, Ack: false}, nil)
-	}
-}
-
-func (c *Client) Profile() client.UserProfile {
-	return c.profile
-}
-
-func (c *Client) SetProfile(profile client.UserProfile) {
-	c.profile = profile
 }
 
 func (c *Client) Nodes() int {
