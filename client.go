@@ -126,8 +126,8 @@ func (c *Client) ID() utils.NodeID {
 	return c.id
 }
 
-func (c *Client) Nodes() int {
-	return len(c.router.KnownNodes())
+func (c *Client) KnownNodes() []utils.NodeInfo {
+	return c.router.KnownNodes()
 }
 
 func (c *Client) MarshalBinary() (data []byte, err error) {

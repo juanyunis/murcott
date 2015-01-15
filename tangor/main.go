@@ -112,7 +112,7 @@ func (s *Session) bootstrap() {
 
 	var nodes int
 	for i := 0; i < 5; i++ {
-		nodes = s.cli.Nodes()
+		nodes = len(s.cli.KnownNodes())
 		fmt.Printf(" -> Found %d nodes", nodes)
 		time.Sleep(200 * time.Millisecond)
 		fmt.Printf("\r")
@@ -173,6 +173,12 @@ func (s *Session) commandLoop() {
 					color.Printf(" -> Start a chat with @{Wk} %s @{|}\n\n", nid.String())
 				}
 			}
+		case "/stat":
+			color.Printf("  * Known nodes *\n")
+			for _, n := range s.cli.KnownNodes() {
+				color.Printf(" %v\n", n)
+			}
+
 		case "/end":
 			if chatID != nil {
 				color.Printf(" -> End current chat\n")
@@ -198,9 +204,10 @@ func showHelp() {
 	fmt.Println()
 	color.Printf(
 		`  * HELP *
-  @{Kg}/chat [ID]@{|}	Start a chat with [ID]
-  @{Kg}/end      @{|}	End current chat
-  @{Kg}/help     @{|}	Show this message
-  @{Kg}/exit     @{|}	Exit this program`)
+ @{Kg}/chat [ID]@{|}	Start a chat with [ID]
+ @{Kg}/end      @{|}	End current chat
+ @{Kg}/help     @{|}	Show this message
+ @{Kg}/stat     @{|}	Show node status
+ @{Kg}/exit     @{|}	Exit this program`)
 	fmt.Println()
 }
