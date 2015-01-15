@@ -43,8 +43,8 @@ func main() {
 	}
 	defer client.Close()
 
-	// Load cache
-	data, err := ioutil.ReadFile(path + "/cache.dat")
+	filename := filepath.Join(path, id.Digest.String()+".dat")
+	data, err := ioutil.ReadFile(filename)
 	if err == nil {
 		client.UnmarshalBinary(data)
 	}
@@ -54,11 +54,15 @@ func main() {
 		for {
 			select {
 			case <-exit:
+				data, err := client.MarshalBinary()
+				if err == nil {
+					ioutil.WriteFile(filename, data, 0755)
+				}
 				return
 			case <-time.After(time.Minute):
 				data, err := client.MarshalBinary()
 				if err == nil {
-					ioutil.WriteFile(path+"/cache.dat", data, 0755)
+					ioutil.WriteFile(filename, data, 0755)
 				}
 			}
 		}
@@ -173,10 +177,26 @@ func (s *Session) commandLoop() {
 					color.Printf(" -> Start a chat with @{Wk} %s @{|}\n\n", nid.String())
 				}
 			}
+		case "/add":
+			if len(c) != 2 {
+				color.Printf(" -> @{Rk}ERROR:@{|} /add takes 1 argument\n")
+			} else {
+				nid, err := utils.NewNodeIDFromString(c[1])
+				if err != nil {
+					color.Printf(" -> @{Rk}ERROR:@{|} invalid ID\n")
+				} else {
+					s.cli.Roster[nid] = murcott.UserProfile{}
+				}
+			}
 		case "/stat":
-			color.Printf("  * Known nodes *\n")
-			for _, n := range s.cli.KnownNodes() {
+			nodes := s.cli.KnownNodes()
+			color.Printf("  * Known nodes (%d) *\n", len(nodes))
+			for _, n := range nodes {
 				color.Printf(" %v\n", n)
+			}
+			color.Printf("  * Roster (%d) *\n", len(s.cli.Roster))
+			for n, p := range s.cli.Roster {
+				color.Printf(" %v %s \n", n, p.Nickname)
 			}
 
 		case "/end":
@@ -206,6 +226,7 @@ func showHelp() {
 		`  * HELP *
  @{Kg}/chat [ID]@{|}	Start a chat with [ID]
  @{Kg}/end      @{|}	End current chat
+ @{Kg}/add  [ID]@{|}	Add [ID] to roster
  @{Kg}/help     @{|}	Show this message
  @{Kg}/stat     @{|}	Show node status
  @{Kg}/exit     @{|}	Exit this program`)

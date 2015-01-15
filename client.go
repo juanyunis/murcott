@@ -12,17 +12,27 @@ import (
 )
 
 type Client struct {
-	router     *router.Router
-	readch     chan router.Message
-	msgHandler messageHandler
-	profile    UserProfile
-	id         utils.NodeID
-	config     utils.Config
-	Roster     *Roster
-	Logger     *log.Logger
+	router  *router.Router
+	readch  chan router.Message
+	profile UserProfile
+	id      utils.NodeID
+	config  utils.Config
+	Roster  Roster
+	Logger  *log.Logger
 }
 
-type messageHandler func(src utils.NodeID, msg ChatMessage)
+// Roster represents a contact list.
+type Roster map[utils.NodeID]UserProfile
+
+func (r Roster) List() []utils.NodeID {
+	var l []utils.NodeID
+	for n, _ := range r {
+		l = append(l, n)
+	}
+	return l
+}
+
+// Message represents a incoming message.
 type Message interface{}
 
 // NewClient generates a Client with the given PrivateKey.
@@ -39,7 +49,7 @@ func NewClient(key *utils.PrivateKey, config utils.Config) (*Client, error) {
 		readch: make(chan router.Message),
 		id:     utils.NewNodeID([4]byte{1, 1, 1, 1}, key.Digest()),
 		config: config,
-		Roster: &Roster{},
+		Roster: Roster{},
 		Logger: logger,
 	}
 
@@ -130,15 +140,28 @@ func (c *Client) KnownNodes() []utils.NodeInfo {
 	return c.router.KnownNodes()
 }
 
+type serializable struct {
+	Roster Roster           `msgpack:"roster"`
+	Nodes  []utils.NodeInfo `msgpack:"nodes"`
+}
+
 func (c *Client) MarshalBinary() (data []byte, err error) {
-	return msgpack.Marshal(c.router.KnownNodes())
+	s := serializable{
+		Roster: c.Roster,
+		Nodes:  c.router.KnownNodes(),
+	}
+	return msgpack.Marshal(s)
 }
 
 func (c *Client) UnmarshalBinary(data []byte) error {
-	var nodes []utils.NodeInfo
-	err := msgpack.Unmarshal(data, &nodes)
-	for _, n := range nodes {
+	var s serializable
+	err := msgpack.Unmarshal(data, &s)
+	if err != nil {
+		return err
+	}
+	for _, n := range s.Nodes {
 		c.router.AddNode(n)
 	}
-	return err
+	c.Roster = s.Roster
+	return nil
 }
