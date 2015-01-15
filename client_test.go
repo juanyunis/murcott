@@ -46,14 +46,7 @@ func TestClientMessage(t *testing.T) {
 		}
 	})
 
-	client1.SendMessage(utils.NewNodeID(namespace, key2.Digest()), plainmsg, func(ok bool) {
-		if ok {
-			success <- true
-		} else {
-			t.Errorf("SendMessage() timed out")
-			success <- false
-		}
-	})
+	client1.SendMessage(utils.NewNodeID(namespace, key2.Digest()), plainmsg)
 
 	go client1.Run()
 	go client2.Run()
