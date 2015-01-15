@@ -130,11 +130,11 @@ func (c *Client) Nodes() int {
 	return len(c.router.KnownNodes())
 }
 
-func (c *Client) MarshalCache() (data []byte, err error) {
+func (c *Client) MarshalBinary() (data []byte, err error) {
 	return msgpack.Marshal(c.router.KnownNodes())
 }
 
-func (c *Client) UnmarshalCache(data []byte) error {
+func (c *Client) UnmarshalBinary(data []byte) error {
 	var nodes []utils.NodeInfo
 	err := msgpack.Unmarshal(data, &nodes)
 	for _, n := range nodes {

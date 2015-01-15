@@ -46,7 +46,7 @@ func main() {
 	// Load cache
 	data, err := ioutil.ReadFile(path + "/cache.dat")
 	if err == nil {
-		client.UnmarshalCache(data)
+		client.UnmarshalBinary(data)
 	}
 
 	exit := make(chan int)
@@ -56,7 +56,7 @@ func main() {
 			case <-exit:
 				return
 			case <-time.After(time.Minute):
-				data, err := client.MarshalCache()
+				data, err := client.MarshalBinary()
 				if err == nil {
 					ioutil.WriteFile(path+"/cache.dat", data, 0755)
 				}
