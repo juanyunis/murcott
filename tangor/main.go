@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/h2so5/murcott"
 	"github.com/h2so5/murcott/client"
 	"github.com/h2so5/murcott/utils"
 	"github.com/wsxiaoys/terminal/color"
@@ -38,7 +37,7 @@ func main() {
 	id := utils.NewNodeID([4]byte{1, 1, 1, 1}, key.Digest())
 	color.Printf("Your ID: @{Wk} %s @{|}\n\n", id.String())
 
-	client, err := murcott.NewClient(key, utils.DefaultConfig)
+	client, err := client.NewClient(key, utils.DefaultConfig)
 	if err != nil {
 		panic(err)
 	}
@@ -102,7 +101,7 @@ func getKey(keyfile string) (*utils.PrivateKey, error) {
 }
 
 type Session struct {
-	cli *murcott.Client
+	cli *client.Client
 }
 
 func (s *Session) bootstrap() {

@@ -1,11 +1,10 @@
 // Package murcott is a decentralized instant messaging framework.
-package murcott
+package client
 
 import (
 	"errors"
 	"time"
 
-	"github.com/h2so5/murcott/client"
 	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/router"
 	"github.com/h2so5/murcott/utils"
@@ -16,15 +15,14 @@ type Client struct {
 	router     *router.Router
 	readch     chan router.Message
 	msgHandler messageHandler
-	status     client.UserStatus
-	profile    client.UserProfile
+	profile    UserProfile
 	id         utils.NodeID
 	config     utils.Config
-	Roster     *client.Roster
+	Roster     *Roster
 	Logger     *log.Logger
 }
 
-type messageHandler func(src utils.NodeID, msg client.ChatMessage)
+type messageHandler func(src utils.NodeID, msg ChatMessage)
 type Message interface{}
 
 // NewClient generates a Client with the given PrivateKey.
@@ -35,41 +33,16 @@ func NewClient(key *utils.PrivateKey, config utils.Config) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	/*
-		node.RegisterMessageType("chat", client.ChatMessage{})
-		node.RegisterMessageType("ack", client.MessageAck{})
-		node.RegisterMessageType("profile-req", client.UserProfileRequest{})
-		node.RegisterMessageType("profile-res", client.UserProfileResponse{})
-		node.RegisterMessageType("presence", client.UserPresence{})
-	*/
+
 	c := &Client{
 		router: r,
 		readch: make(chan router.Message),
-		status: client.UserStatus{Type: client.StatusOffline},
 		id:     utils.NewNodeID([4]byte{1, 1, 1, 1}, key.Digest()),
 		config: config,
-		Roster: &client.Roster{},
+		Roster: &Roster{},
 		Logger: logger,
 	}
-	/*
-		c.node.Handle(func(src utils.NodeID, msg interface{}) interface{} {
-			switch msg.(type) {
-			case client.ChatMessage:
-				if c.msgHandler != nil {
-					c.msgHandler(src, msg.(client.ChatMessage))
-				}
-				return client.MessageAck{}
-			case client.UserProfileRequest:
-				return client.UserProfileResponse{Profile: c.profile}
-			case client.UserPresence:
-				p := msg.(client.UserPresence)
-				if !p.Ack {
-					c.node.Send(src, client.UserPresence{Status: c.status, Ack: true})
-				}
-			}
-			return nil
-		})
-	*/
+
 	return c, nil
 }
 
@@ -87,8 +60,8 @@ func (c *Client) Read() (Message, utils.NodeID, error) {
 	switch t.Type {
 	case "chat":
 		u := struct {
-			Content client.ChatMessage `msgpack:"content"`
-			ID      string             `msgpack:"id"`
+			Content ChatMessage `msgpack:"content"`
+			ID      string      `msgpack:"id"`
 		}{}
 		err := msgpack.Unmarshal(m.Payload, &u)
 		if err != nil {
@@ -128,14 +101,12 @@ func (c *Client) Run() {
 
 // Stops the current mainloop.
 func (c *Client) Close() {
-	status := c.status
-	status.Type = client.StatusOffline
 	time.Sleep(100 * time.Millisecond)
 	c.router.Close()
 }
 
 // Sends the given message to the destination node.
-func (c *Client) SendMessage(dst utils.NodeID, msg client.ChatMessage) error {
+func (c *Client) SendMessage(dst utils.NodeID, msg ChatMessage) error {
 	t := struct {
 		Type    string      `msgpack:"type"`
 		Content interface{} `msgpack:"content"`
