@@ -129,14 +129,22 @@ func (s *Session) bootstrap() {
 func (s *Session) commandLoop() {
 	var chatID *utils.NodeID
 
-	s.cli.HandleMessages(func(src utils.NodeID, msg client.ChatMessage) {
-		if chatID == nil {
-			chatID = &src
-			color.Printf("\n -> Start a chat with @{Wk} %s @{|}\n\n", src.String())
+	go func() {
+		for {
+			m, src, err := s.cli.Read()
+			if err != nil {
+				return
+			}
+			if msg, ok := m.(client.ChatMessage); ok {
+				if chatID == nil {
+					chatID = &src
+					color.Printf("\n -> Start a chat with @{Wk} %s @{|}\n\n", src.String())
+				}
+				color.Printf("\r* @{Wk}%s@{|} %s\n", src.String()[:6], msg.Text())
+				fmt.Print("* ")
+			}
 		}
-		color.Printf("\r* @{Wk}%s@{|} %s\n", src.String()[:6], msg.Text())
-		fmt.Print("* ")
-	})
+	}()
 
 	bio := bufio.NewReader(os.Stdin)
 	for {

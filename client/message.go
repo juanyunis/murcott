@@ -93,3 +93,7 @@ type UserPresence struct {
 	Status UserStatus `msgpack:"status"`
 	Ack    bool       `msgpack:"ack"`
 }
+
+type UnknownMessage struct {
+	Data []byte
+}
