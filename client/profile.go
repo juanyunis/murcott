@@ -7,7 +7,7 @@ import (
 	"image/png"
 	"reflect"
 
-	"github.com/vmihailenco/msgpack"
+	"gopkg.in/vmihailenco/msgpack.v2"
 )
 
 type UserProfile struct {

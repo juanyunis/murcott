@@ -4,7 +4,7 @@ import (
 	"net"
 	"reflect"
 
-	"github.com/vmihailenco/msgpack"
+	"gopkg.in/vmihailenco/msgpack.v2"
 )
 
 type NodeInfo struct {

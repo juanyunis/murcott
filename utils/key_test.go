@@ -3,7 +3,7 @@ package utils
 import (
 	"testing"
 
-	"github.com/vmihailenco/msgpack"
+	"gopkg.in/vmihailenco/msgpack.v2"
 )
 
 func TestKeySignature(t *testing.T) {

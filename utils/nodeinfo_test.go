@@ -5,7 +5,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/vmihailenco/msgpack"
+	"gopkg.in/vmihailenco/msgpack.v2"
 )
 
 func TestNodeInfoMsgpack(t *testing.T) {

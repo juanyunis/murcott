@@ -11,7 +11,7 @@ import (
 
 	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/utils"
-	"github.com/vmihailenco/msgpack"
+	"gopkg.in/vmihailenco/msgpack.v2"
 )
 
 type dhtRPCCallback func(*dhtRPCCommand, *net.UDPAddr)

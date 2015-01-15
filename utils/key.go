@@ -12,7 +12,7 @@ import (
 	"reflect"
 
 	"github.com/tv42/base58"
-	"github.com/vmihailenco/msgpack"
+	"gopkg.in/vmihailenco/msgpack.v2"
 )
 
 // PublicKey represents an ECDSA public key.
