@@ -1,7 +1,6 @@
 package node
 
 import (
-	"crypto/rand"
 	"errors"
 	"reflect"
 
@@ -24,10 +23,8 @@ type msghandler struct {
 type Node struct {
 	router        *router.Router
 	handler       func(utils.NodeID, interface{}) interface{}
-	idmap         map[string]func(interface{})
 	name2type     map[string]reflect.Type
 	type2name     map[reflect.Type]string
-	register      chan msghandler
 	cancelHandler chan string
 	cancelMessage chan int
 	config        utils.Config
@@ -43,10 +40,8 @@ func NewNode(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (*N
 
 	n := &Node{
 		router:        router,
-		idmap:         make(map[string]func(interface{})),
 		name2type:     make(map[string]reflect.Type),
 		type2name:     make(map[reflect.Type]string),
-		register:      make(chan msghandler, 2),
 		cancelHandler: make(chan string),
 		cancelMessage: make(chan int),
 		config:        config,
@@ -84,15 +79,6 @@ func (p *Node) Run() {
 				p.parseMessage(t.Type, m.Payload, m.ID)
 			}
 
-		case h := <-p.register:
-			p.idmap[h.id] = h.callback
-
-		case id := <-p.cancelHandler:
-			if h, ok := p.idmap[id]; ok {
-				h(nil)
-				delete(p.idmap, id)
-			}
-
 		case <-p.exit:
 			return
 		}
@@ -121,23 +107,20 @@ func (p *Node) parseCommand(payload []byte, id utils.NodeID, typ reflect.Type) {
 	v := reflect.New(typ)
 	c.Content = v.Interface()
 	if msgpack.Unmarshal(payload, &c) == nil {
-		if h, ok := p.idmap[c.ID]; ok {
-			h(reflect.Indirect(v).Interface())
-			delete(p.idmap, c.ID)
-		} else if p.handler != nil {
+		if p.handler != nil {
 			r := p.handler(id, reflect.Indirect(v).Interface())
 			if r != nil {
-				p.sendWithID(id, r, nil, c.ID)
+				p.sendWithID(id, r, c.ID)
 			}
 		}
 	}
 }
 
-func (p *Node) Send(dst utils.NodeID, msg interface{}, handler func(interface{})) error {
-	return p.sendWithID(dst, msg, handler, "")
+func (p *Node) Send(dst utils.NodeID, msg interface{}) error {
+	return p.sendWithID(dst, msg, "")
 }
 
-func (p *Node) sendWithID(dst utils.NodeID, msg interface{}, handler func(interface{}), id string) error {
+func (p *Node) sendWithID(dst utils.NodeID, msg interface{}, id string) error {
 	t := struct {
 		Type    string      `msgpack:"type"`
 		Content interface{} `msgpack:"content"`
@@ -146,11 +129,6 @@ func (p *Node) sendWithID(dst utils.NodeID, msg interface{}, handler func(interf
 
 	if len(id) != 0 {
 		t.ID = id
-	} else if handler != nil {
-		r := make([]byte, 10)
-		rand.Read(r)
-		t.ID = string(r)
-		p.register <- msghandler{t.ID, handler}
 	}
 
 	if n, ok := p.type2name[reflect.TypeOf(msg)]; ok {

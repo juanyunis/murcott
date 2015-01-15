@@ -59,13 +59,17 @@ func NewClient(key *utils.PrivateKey, config utils.Config) (*Client, error) {
 		case client.UserPresence:
 			p := msg.(client.UserPresence)
 			if !p.Ack {
-				c.node.Send(src, client.UserPresence{Status: c.status, Ack: true}, nil)
+				c.node.Send(src, client.UserPresence{Status: c.status, Ack: true})
 			}
 		}
 		return nil
 	})
 
 	return c, nil
+}
+
+func Read() (Message, error) {
+	return nil, nil
 }
 
 // Starts a mainloop in the current goroutine.
@@ -78,7 +82,7 @@ func (c *Client) Close() {
 	status := c.status
 	status.Type = client.StatusOffline
 	for _, n := range c.Roster.List() {
-		c.node.Send(n, client.UserPresence{Status: status, Ack: false}, nil)
+		c.node.Send(n, client.UserPresence{Status: status, Ack: false})
 	}
 	time.Sleep(100 * time.Millisecond)
 	c.node.Close()
@@ -86,7 +90,7 @@ func (c *Client) Close() {
 
 // Sends the given message to the destination node.
 func (c *Client) SendMessage(dst utils.NodeID, msg client.ChatMessage) {
-	c.node.Send(dst, msg, func(r interface{}) {})
+	c.node.Send(dst, msg)
 }
 
 // HandleMessages registers the given function as a massage handler.
