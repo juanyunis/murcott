@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/h2so5/murcott/client"
+	"github.com/h2so5/murcott"
 	"github.com/h2so5/murcott/utils"
 	"github.com/wsxiaoys/terminal/color"
 )
@@ -37,7 +37,7 @@ func main() {
 	id := utils.NewNodeID([4]byte{1, 1, 1, 1}, key.Digest())
 	color.Printf("Your ID: @{Wk} %s @{|}\n\n", id.String())
 
-	client, err := client.NewClient(key, utils.DefaultConfig)
+	client, err := murcott.NewClient(key, utils.DefaultConfig)
 	if err != nil {
 		panic(err)
 	}
@@ -101,7 +101,7 @@ func getKey(keyfile string) (*utils.PrivateKey, error) {
 }
 
 type Session struct {
-	cli *client.Client
+	cli *murcott.Client
 }
 
 func (s *Session) bootstrap() {
@@ -134,7 +134,7 @@ func (s *Session) commandLoop() {
 			if err != nil {
 				return
 			}
-			if msg, ok := m.(client.ChatMessage); ok {
+			if msg, ok := m.(murcott.ChatMessage); ok {
 				if chatID == nil {
 					chatID = &src
 					color.Printf("\n -> Start a chat with @{Wk} %s @{|}\n\n", src.String())
@@ -188,7 +188,7 @@ func (s *Session) commandLoop() {
 				color.Printf(" -> @{Rk}ERROR:@{|} unknown command\n")
 				showHelp()
 			} else {
-				s.cli.SendMessage(*chatID, client.NewPlainChatMessage(string(line)))
+				s.cli.SendMessage(*chatID, murcott.NewPlainChatMessage(string(line)))
 			}
 		}
 	}

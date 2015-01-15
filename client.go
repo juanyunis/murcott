@@ -1,5 +1,5 @@
 // Package murcott is a decentralized instant messaging framework.
-package client
+package murcott
 
 import (
 	"errors"

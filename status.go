@@ -1,4 +1,4 @@
-package client
+package murcott
 
 const (
 	StatusOffline = "offline"
