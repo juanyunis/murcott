@@ -51,11 +51,7 @@ func TestClientMessage(t *testing.T) {
 	go client1.Run()
 	go client2.Run()
 
-	for i := 0; i < 2; i++ {
-		if !<-success {
-			return
-		}
-	}
+	<-success
 
 	client1.Close()
 	client2.Close()
