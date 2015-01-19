@@ -185,7 +185,7 @@ func (s *Session) commandLoop() {
 				if err != nil {
 					color.Printf(" -> @{Rk}ERROR:@{|} invalid ID\n")
 				} else {
-					s.cli.Roster[nid] = murcott.UserProfile{}
+					s.cli.Roster.Set(nid, murcott.UserProfile{})
 				}
 			}
 		case "/stat":
@@ -194,9 +194,10 @@ func (s *Session) commandLoop() {
 			for _, n := range nodes {
 				color.Printf(" %v\n", n)
 			}
-			color.Printf("  * Roster (%d) *\n", len(s.cli.Roster))
-			for n, p := range s.cli.Roster {
-				color.Printf(" %v %s \n", n, p.Nickname)
+			list := s.cli.Roster.List()
+			color.Printf("  * Roster (%d) *\n", len(list))
+			for _, n := range list {
+				color.Printf(" %v %s \n", n, s.cli.Roster.Get(n).Nickname)
 			}
 
 		case "/end":

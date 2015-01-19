@@ -12,14 +12,16 @@ import (
 )
 
 type Client struct {
-	router  *router.Router
-	readch  chan router.Message
-	mbuf    *messageBuffer
+	router *router.Router
+	readch chan router.Message
+	mbuf   *messageBuffer
+	id     utils.NodeID
+	config utils.Config
+
 	profile UserProfile
-	id      utils.NodeID
-	config  utils.Config
 	Roster  Roster
-	Logger  *log.Logger
+
+	Logger *log.Logger
 }
 
 type readPair struct {
@@ -90,17 +92,6 @@ func (b *messageBuffer) Close() {
 	}
 }
 
-// Roster represents a contact list.
-type Roster map[utils.NodeID]UserProfile
-
-func (r Roster) List() []utils.NodeID {
-	var l []utils.NodeID
-	for n, _ := range r {
-		l = append(l, n)
-	}
-	return l
-}
-
 // Message represents a incoming message.
 type Message interface{}
 
@@ -119,7 +110,6 @@ func NewClient(key *utils.PrivateKey, config utils.Config) (*Client, error) {
 		mbuf:   newMessageBuffer(128),
 		id:     utils.NewNodeID([4]byte{1, 1, 1, 1}, key.Digest()),
 		config: config,
-		Roster: Roster{},
 		Logger: logger,
 	}
 
