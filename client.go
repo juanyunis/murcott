@@ -239,6 +239,22 @@ func (c *Client) SendProfile(dst utils.NodeID) error {
 	return nil
 }
 
+func (c *Client) SendProfileRequest(dst utils.NodeID) error {
+	t := struct {
+		Type    string      `msgpack:"type"`
+		Content interface{} `msgpack:"content"`
+		ID      string      `msgpack:"id"`
+	}{Type: "prof-req", Content: UserProfileRequest{}}
+
+	data, err := msgpack.Marshal(t)
+	if err != nil {
+		return err
+	}
+
+	c.router.SendMessage(dst, data)
+	return nil
+}
+
 func (c *Client) ID() utils.NodeID {
 	return c.id
 }
@@ -270,5 +286,10 @@ func (c *Client) UnmarshalBinary(data []byte) error {
 		c.router.AddNode(n)
 	}
 	c.Roster = s.Roster
+
+	for _, id := range c.Roster.List() {
+		c.SendProfileRequest(id)
+	}
+
 	return nil
 }
