@@ -3,7 +3,7 @@ package murcott
 
 import (
 	"errors"
-	"time"
+	"sync"
 
 	"github.com/h2so5/murcott/log"
 	"github.com/h2so5/murcott/router"
@@ -14,11 +14,80 @@ import (
 type Client struct {
 	router  *router.Router
 	readch  chan router.Message
+	mbuf    *messageBuffer
 	profile UserProfile
 	id      utils.NodeID
 	config  utils.Config
 	Roster  Roster
 	Logger  *log.Logger
+}
+
+type readPair struct {
+	M  Message
+	ID utils.NodeID
+}
+
+type messageBuffer struct {
+	b           []readPair
+	begin, size int
+	ch          chan int
+	closed      chan int
+	mutex       sync.Mutex
+}
+
+func newMessageBuffer(size int) *messageBuffer {
+	return &messageBuffer{
+		b:      make([]readPair, size),
+		ch:     make(chan int),
+		closed: make(chan int),
+	}
+}
+
+func (b *messageBuffer) Push(m readPair) {
+	b.mutex.Lock()
+	index := (b.begin + b.size) % len(b.b)
+	b.b[index] = m
+	if b.size < len(b.b) {
+		b.size++
+	} else {
+		b.begin = (b.begin + 1) % len(b.b)
+	}
+	b.mutex.Unlock()
+	select {
+	case <-b.closed:
+	case b.ch <- 0:
+	default:
+	}
+}
+
+func (b *messageBuffer) Pop() (readPair, error) {
+	b.mutex.Lock()
+	l := len(b.b)
+	b.mutex.Unlock()
+
+	if l == 0 {
+		select {
+		case <-b.ch:
+		case <-b.closed:
+			return readPair{}, errors.New("closed")
+		}
+	}
+
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	index := (b.begin + b.size) % len(b.b)
+	m := b.b[index]
+	b.begin = (b.begin + 1) % len(b.b)
+	b.size--
+	return m, nil
+}
+
+func (b *messageBuffer) Close() {
+	select {
+	case <-b.closed:
+		close(b.closed)
+	default:
+	}
 }
 
 // Roster represents a contact list.
@@ -47,6 +116,7 @@ func NewClient(key *utils.PrivateKey, config utils.Config) (*Client, error) {
 	c := &Client{
 		router: r,
 		readch: make(chan router.Message),
+		mbuf:   newMessageBuffer(128),
 		id:     utils.NewNodeID([4]byte{1, 1, 1, 1}, key.Digest()),
 		config: config,
 		Roster: Roster{},
@@ -56,32 +126,36 @@ func NewClient(key *utils.PrivateKey, config utils.Config) (*Client, error) {
 	return c, nil
 }
 
-func (c *Client) Read() (Message, utils.NodeID, error) {
-	m := <-c.readch
-
+func (c *Client) parseMessage(rm router.Message) {
 	var t struct {
 		Type string `msgpack:"type"`
 	}
-	err := msgpack.Unmarshal(m.Payload, &t)
+	err := msgpack.Unmarshal(rm.Payload, &t)
 	if err != nil {
-		return nil, utils.NodeID{}, err
+		return
 	}
 
+	var m Message
 	switch t.Type {
 	case "chat":
 		u := struct {
 			Content ChatMessage `msgpack:"content"`
 			ID      string      `msgpack:"id"`
 		}{}
-		err := msgpack.Unmarshal(m.Payload, &u)
+		err := msgpack.Unmarshal(rm.Payload, &u)
 		if err != nil {
-			return nil, utils.NodeID{}, err
+			return
 		}
-		return u.Content, m.ID, nil
-
-	default:
-		return nil, utils.NodeID{}, errors.New("Unknown message type: " + t.Type)
+		m = u.Content
 	}
+	if m != nil {
+		c.mbuf.Push(readPair{M: m, ID: rm.ID})
+	}
+}
+
+func (c *Client) Read() (Message, utils.NodeID, error) {
+	m, err := c.mbuf.Pop()
+	return m.M, m.ID, err
 }
 
 // Starts a mainloop in the current goroutine.
@@ -111,7 +185,7 @@ func (c *Client) Run() {
 
 // Stops the current mainloop.
 func (c *Client) Close() {
-	time.Sleep(100 * time.Millisecond)
+	c.mbuf.Close()
 	c.router.Close()
 }
 
