@@ -125,18 +125,41 @@ func (c *Client) parseMessage(rm router.Message) {
 		return
 	}
 
+	u := struct {
+		ID string `msgpack:"id"`
+	}{}
+	err = msgpack.Unmarshal(rm.Payload, &u)
+	if err != nil {
+		return
+	}
+
+	id, err := utils.NewNodeIDFromString(u.ID)
+	if err != nil {
+		return
+	}
+
 	var m Message
 	switch t.Type {
 	case "chat":
 		u := struct {
 			Content ChatMessage `msgpack:"content"`
-			ID      string      `msgpack:"id"`
 		}{}
 		err := msgpack.Unmarshal(rm.Payload, &u)
 		if err != nil {
 			return
 		}
 		m = u.Content
+
+	case "prof-res":
+		u := struct {
+			Content UserProfileResponse `msgpack:"content"`
+		}{}
+		err := msgpack.Unmarshal(rm.Payload, &u)
+		if err != nil {
+			return
+		}
+		m = u.Content
+		c.Roster.Set(id, u.Content.Profile)
 	}
 	if m != nil {
 		c.mbuf.Push(readPair{M: m, ID: rm.ID})
