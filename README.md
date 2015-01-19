@@ -19,26 +19,34 @@ package main
 
 import (
 	"fmt"
-	"github.com/h2so5/murcott"
 	"os"
 	"strings"
-)
+
+	"github.com/h2so5/murcott"
+	"github.com/h2so5/murcott/utils"
+	)
 
 func main() {
+
 	// Private key identifies the ownership of your node.
 	key := utils.GeneratePrivateKey()
-	fmt.Println("Your node id: " + key.PublicKeyHash().String())
-
-	// Storage keeps client's persistent data.
-	storage := utils.NewStorage("storage.sqlite3")
+	fmt.Println("Your node id: " + key.Digest().String())
 
 	// Create a client with the private key and the storage.
-	client, _ := utils.NewClient(key, storage, utils.DefaultConfig)
+	client, _ := murcott.NewClient(key, utils.DefaultConfig)
 
 	// Handle incoming messages.
-	client.HandleMessages(func(src utils.NodeID, msg utils.ChatMessage) {
-		fmt.Println(msg.Text() + " from " + src.String())
-	})
+	go func() {
+		for {
+			m, src, err := client.Read()
+			if err != nil {
+				return
+			}
+			if msg, ok := m.(murcott.ChatMessage); ok {
+				fmt.Println(msg.Text() + " from " + src.String())
+			}
+		}
+	}()
 
 	// Start client's mainloop.
 	go client.Run()
@@ -58,11 +66,7 @@ func main() {
 		}
 
 		// Send message to the destination node.
-		client.SendMessage(dst, utils.NewPlainChatMessage(str), func(ok bool) {
-			if !ok {
-				fmt.Println("Failed to deliver the message to the node...")
-			}
-		})
+		client.SendMessage(dst, murcott.NewPlainChatMessage(str))
 	}
 
 	// Stop client's mainloop.
