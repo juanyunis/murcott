@@ -160,6 +160,10 @@ func (c *Client) parseMessage(rm router.Message) {
 		}
 		m = u.Content
 		c.Roster.Set(id, u.Content.Profile)
+
+	case "prof-req":
+		c.SendProfile(id)
+
 	}
 	if m != nil {
 		c.mbuf.Push(readPair{M: m, ID: rm.ID})
@@ -209,6 +213,22 @@ func (c *Client) SendMessage(dst utils.NodeID, msg ChatMessage) error {
 		Content interface{} `msgpack:"content"`
 		ID      string      `msgpack:"id"`
 	}{Type: "chat", Content: msg}
+
+	data, err := msgpack.Marshal(t)
+	if err != nil {
+		return err
+	}
+
+	c.router.SendMessage(dst, data)
+	return nil
+}
+
+func (c *Client) SendProfile(dst utils.NodeID) error {
+	t := struct {
+		Type    string      `msgpack:"type"`
+		Content interface{} `msgpack:"content"`
+		ID      string      `msgpack:"id"`
+	}{Type: "prof-res", Content: c.profile}
 
 	data, err := msgpack.Marshal(t)
 	if err != nil {
