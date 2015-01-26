@@ -91,12 +91,24 @@ func (p *Router) Discover(addrs []net.UDPAddr) {
 	}
 }
 
-func (p *Router) Join(group utils.NodeID) {
+func (p *Router) Join(group utils.NodeID) error {
 	p.dhtMutex.Lock()
 	defer p.dhtMutex.Unlock()
 	if _, ok := p.dht[group.NS]; !ok {
 		p.dht[group.NS] = dht.NewDHT(10, group, p.listener.RawConn, p.logger)
+		return nil
 	}
+	return errors.New("already joined")
+}
+
+func (p *Router) Leave(group utils.NodeID) error {
+	p.dhtMutex.Lock()
+	defer p.dhtMutex.Unlock()
+	if _, ok := p.dht[group.NS]; ok {
+		delete(p.dht, group.NS)
+		return nil
+	}
+	return errors.New("not joined")
 }
 
 func (p *Router) SendMessage(dst utils.NodeID, payload []byte) error {

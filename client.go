@@ -185,6 +185,14 @@ func (c *Client) Read() (Message, utils.NodeID, error) {
 	return m.M, m.ID, err
 }
 
+func (c *Client) Join(id utils.NodeID) error {
+	return c.router.Join(id)
+}
+
+func (c *Client) Leave(id utils.NodeID) error {
+	return c.router.Leave(id)
+}
+
 // Starts a mainloop in the current goroutine.
 func (c *Client) Run() {
 
