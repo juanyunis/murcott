@@ -7,7 +7,7 @@ import (
 )
 
 func TestNodeIDMsgpack(t *testing.T) {
-	id := NewRandomNodeID([4]byte{1, 1, 1, 1})
+	id := NewRandomNodeID(GlobalNamespace)
 	data, err := msgpack.Marshal(id)
 	if err != nil {
 		t.Errorf("cannot marshal NodeID")
@@ -20,7 +20,7 @@ func TestNodeIDMsgpack(t *testing.T) {
 }
 
 func TestNodeIDString(t *testing.T) {
-	id := NewRandomNodeID([4]byte{1, 1, 1, 1})
+	id := NewRandomNodeID(GlobalNamespace)
 	str := id.String()
 	id2, err := NewNodeIDFromString(str)
 	if err != nil || id.Digest.Cmp(id2.Digest) != 0 {

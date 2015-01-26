@@ -34,7 +34,7 @@ func main() {
 		os.Exit(-1)
 	}
 
-	id := utils.NewNodeID([4]byte{1, 1, 1, 1}, key.Digest())
+	id := utils.NewNodeID(utils.GlobalNamespace, key.Digest())
 	color.Printf("Your ID: @{Wk} %s @{|}\n\n", id.String())
 
 	client, err := murcott.NewClient(key, utils.DefaultConfig)

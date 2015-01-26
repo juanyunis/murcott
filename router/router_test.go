@@ -11,7 +11,7 @@ import (
 	"github.com/h2so5/murcott/log"
 )
 
-var namespace = [4]byte{1, 1, 1, 1}
+var namespace = utils.GlobalNamespace
 
 func TestRouterMessageExchange(t *testing.T) {
 	logger := log.NewLogger()

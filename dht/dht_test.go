@@ -11,7 +11,7 @@ import (
 	"github.com/h2so5/utp"
 )
 
-var namespace = [4]byte{1, 1, 1, 1}
+var namespace = utils.GlobalNamespace
 
 func getLoopbackAddr(addr net.Addr) (*net.UDPAddr, error) {
 	_, port, err := net.SplitHostPort(addr.String())

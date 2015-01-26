@@ -14,7 +14,7 @@ func TestNodeInfoMsgpack(t *testing.T) {
 		t.Errorf("cannot marshal NodeInfo")
 	}
 
-	info := NodeInfo{ID: NewRandomNodeID([4]byte{1, 1, 1, 1}), Addr: addr}
+	info := NodeInfo{ID: NewRandomNodeID(GlobalNamespace), Addr: addr}
 	data, err := msgpack.Marshal(info)
 	if err != nil {
 		t.Errorf("cannot marshal NodeInfo")

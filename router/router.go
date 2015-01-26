@@ -73,7 +73,7 @@ func NewRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 		exit:   exit,
 	}
 
-	ns := [4]byte{1, 1, 1, 1}
+	ns := utils.GlobalNamespace
 	r.dht[ns] = dht.NewDHT(10, utils.NewNodeID(ns, key.Digest()), listener.RawConn, logger)
 
 	go r.run()
@@ -223,7 +223,7 @@ func (p *Router) readSession(s *session) {
 			p.removeSession(s)
 			return
 		}
-		ns := [4]byte{1, 1, 1, 1}
+		ns := utils.GlobalNamespace
 		if !bytes.Equal(pkt.Src.NS[:], ns[:]) {
 			p.dhtMutex.RLock()
 			if d, ok := p.dht[pkt.Src.NS]; ok {

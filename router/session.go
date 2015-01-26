@@ -55,7 +55,7 @@ func newSesion(conn net.Conn, lkey *utils.PrivateKey) (*session, error) {
 }
 
 func (s *session) ID() utils.NodeID {
-	return utils.NewNodeID([4]byte{1, 1, 1, 1}, s.rkey.Digest())
+	return utils.NewNodeID(utils.GlobalNamespace, s.rkey.Digest())
 }
 
 func (s *session) Read() (internal.Packet, error) {
@@ -93,7 +93,7 @@ func (s *session) verifyPubkey() error {
 		var key utils.PublicKey
 		err := msgpack.Unmarshal(packet.Payload, &key)
 		if err == nil {
-			id := utils.NewNodeID([4]byte{1, 1, 1, 1}, key.Digest())
+			id := utils.NewNodeID(utils.GlobalNamespace, key.Digest())
 			if id.Digest.Cmp(packet.Src.Digest) != 0 {
 				return errors.New("receive wrong public key")
 			}
@@ -128,7 +128,7 @@ func (s *session) sendPubkey() error {
 	}
 
 	pkt := internal.Packet{
-		Src:     utils.NewNodeID([4]byte{1, 1, 1, 1}, s.lkey.Digest()),
+		Src:     utils.NewNodeID(utils.GlobalNamespace, s.lkey.Digest()),
 		Type:    "pubkey",
 		Payload: data,
 	}
@@ -148,7 +148,7 @@ func (s *session) sendCommonKey() ([]byte, error) {
 	}
 
 	pkt := internal.Packet{
-		Src:     utils.NewNodeID([4]byte{1, 1, 1, 1}, s.lkey.Digest()),
+		Src:     utils.NewNodeID(utils.GlobalNamespace, s.lkey.Digest()),
 		Type:    "key",
 		Payload: key[:],
 	}

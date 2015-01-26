@@ -107,7 +107,7 @@ func NewClient(key *utils.PrivateKey, config utils.Config) (*Client, error) {
 		router: r,
 		readch: make(chan router.Message),
 		mbuf:   newMessageBuffer(128),
-		id:     utils.NewNodeID([4]byte{1, 1, 1, 1}, key.Digest()),
+		id:     utils.NewNodeID(utils.GlobalNamespace, key.Digest()),
 		config: config,
 		Logger: logger,
 	}

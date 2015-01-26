@@ -8,8 +8,8 @@ import (
 
 func TestPacketSignature(t *testing.T) {
 	packet := Packet{
-		Dst:     utils.NewRandomNodeID([4]byte{1, 1, 1, 1}),
-		Src:     utils.NewRandomNodeID([4]byte{1, 1, 1, 1}),
+		Dst:     utils.NewRandomNodeID(utils.GlobalNamespace),
+		Src:     utils.NewRandomNodeID(utils.GlobalNamespace),
 		Type:    "dht",
 		Payload: []byte("payload"),
 	}
