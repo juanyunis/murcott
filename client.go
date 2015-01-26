@@ -32,8 +32,7 @@ type readPair struct {
 type messageBuffer struct {
 	b           []readPair
 	begin, size int
-	ch          chan int
-	closed      chan int
+	ch, closed  chan int
 	mutex       sync.Mutex
 }
 
@@ -92,7 +91,7 @@ func (b *messageBuffer) Close() {
 	}
 }
 
-// Message represents a incoming message.
+// Message represents an incoming message.
 type Message interface{}
 
 // NewClient generates a Client with the given PrivateKey.
@@ -150,6 +149,16 @@ func (c *Client) parseMessage(rm router.Message) {
 		}
 		m = u.Content
 
+	case "ack":
+		u := struct {
+			Content MessageAck `msgpack:"content"`
+		}{}
+		err := msgpack.Unmarshal(rm.Payload, &u)
+		if err != nil {
+			return
+		}
+		m = u.Content
+
 	case "prof-res":
 		u := struct {
 			Content UserProfileResponse `msgpack:"content"`
@@ -166,7 +175,8 @@ func (c *Client) parseMessage(rm router.Message) {
 
 	}
 	if m != nil {
-		c.mbuf.Push(readPair{M: m, ID: rm.ID})
+		c.mbuf.Push(readPair{M: m, ID: rm.Node})
+		c.SendAck(rm.Node, rm.ID)
 	}
 }
 
@@ -211,7 +221,6 @@ func (c *Client) SendMessage(dst utils.NodeID, msg ChatMessage) error {
 	t := struct {
 		Type    string      `msgpack:"type"`
 		Content interface{} `msgpack:"content"`
-		ID      string      `msgpack:"id"`
 	}{Type: "chat", Content: msg}
 
 	data, err := msgpack.Marshal(t)
@@ -227,7 +236,6 @@ func (c *Client) SendProfile(dst utils.NodeID) error {
 	t := struct {
 		Type    string      `msgpack:"type"`
 		Content interface{} `msgpack:"content"`
-		ID      string      `msgpack:"id"`
 	}{Type: "prof-res", Content: c.profile}
 
 	data, err := msgpack.Marshal(t)
@@ -243,8 +251,22 @@ func (c *Client) SendProfileRequest(dst utils.NodeID) error {
 	t := struct {
 		Type    string      `msgpack:"type"`
 		Content interface{} `msgpack:"content"`
-		ID      string      `msgpack:"id"`
 	}{Type: "prof-req", Content: UserProfileRequest{}}
+
+	data, err := msgpack.Marshal(t)
+	if err != nil {
+		return err
+	}
+
+	c.router.SendMessage(dst, data)
+	return nil
+}
+
+func (c *Client) SendAck(dst utils.NodeID, id []byte) error {
+	t := struct {
+		Type    string      `msgpack:"type"`
+		Content interface{} `msgpack:"content"`
+	}{Type: "ack", Content: MessageAck{ID: id}}
 
 	data, err := msgpack.Marshal(t)
 	if err != nil {

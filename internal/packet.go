@@ -13,6 +13,7 @@ type Packet struct {
 	Src     utils.NodeID    `msgpack:"src"`
 	Type    string          `msgpack:"type"`
 	Payload []byte          `msgpack:"payload"`
+	ID      []byte          `msgpack:"id"`
 	S       utils.Signature `msgpack:"sign"`
 	TTL     uint8           `msgpack:"ttl"`
 }
@@ -23,6 +24,7 @@ func (p *Packet) Serialize() []byte {
 		p.Src.Bytes(),
 		p.Type,
 		p.Payload,
+		p.ID,
 	}
 
 	data, _ := msgpack.Marshal(ary)

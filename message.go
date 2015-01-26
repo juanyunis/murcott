@@ -80,6 +80,7 @@ func (m *ChatMessage) Len() int {
 }
 
 type MessageAck struct {
+	ID []byte
 }
 
 type UserProfileRequest struct {

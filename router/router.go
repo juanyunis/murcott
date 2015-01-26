@@ -17,8 +17,9 @@ import (
 )
 
 type Message struct {
-	ID      utils.NodeID
+	Node    utils.NodeID
 	Payload []byte
+	ID      []byte
 }
 
 type Router struct {
@@ -239,7 +240,8 @@ func (p *Router) readSession(s *session) {
 			p.dhtMutex.RUnlock()
 		}
 		if pkt.Type == "msg" {
-			p.recv <- Message{ID: pkt.Src, Payload: pkt.Payload}
+			id, _ := time.Now().MarshalBinary()
+			p.recv <- Message{Node: pkt.Src, Payload: pkt.Payload, ID: id}
 		}
 	}
 }
