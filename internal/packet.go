@@ -1,3 +1,4 @@
+// Package internal provides internal classes for murcott.
 package internal
 
 import (

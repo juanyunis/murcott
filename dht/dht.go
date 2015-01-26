@@ -1,3 +1,4 @@
+// Package dht provides a DHT for murcott.
 package dht
 
 import (

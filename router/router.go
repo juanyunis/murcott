@@ -1,3 +1,4 @@
+// Package router provides a router for murcott.
 package router
 
 import (

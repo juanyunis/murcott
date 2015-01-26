@@ -1,3 +1,4 @@
+// Package utils provides utilities for murcott.
 package utils
 
 import (
