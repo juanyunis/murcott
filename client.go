@@ -3,7 +3,6 @@ package murcott
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/h2so5/murcott/log"
@@ -117,7 +116,6 @@ func NewClient(key *utils.PrivateKey, config utils.Config) (*Client, error) {
 }
 
 func (c *Client) parseMessage(rm router.Message) {
-	fmt.Println(rm)
 	var t struct {
 		Type string `msgpack:"type"`
 		ID   string `msgpack:"id"`
