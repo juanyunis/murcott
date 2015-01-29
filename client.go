@@ -3,6 +3,7 @@ package murcott
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/h2so5/murcott/log"
@@ -116,6 +117,7 @@ func NewClient(key *utils.PrivateKey, config utils.Config) (*Client, error) {
 }
 
 func (c *Client) parseMessage(rm router.Message) {
+	fmt.Println(rm)
 	var t struct {
 		Type string `msgpack:"type"`
 		ID   string `msgpack:"id"`
@@ -167,7 +169,8 @@ func (c *Client) parseMessage(rm router.Message) {
 		c.SendProfile(id)
 
 	}
-	if m != nil {
+
+	if m != nil && t.Type != "ack" {
 		c.mbuf.Push(readPair{M: m, ID: rm.Node})
 		c.SendAck(rm.Node, rm.ID)
 	}
