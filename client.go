@@ -63,7 +63,7 @@ func (b *messageBuffer) Push(m readPair) {
 
 func (b *messageBuffer) Pop() (readPair, error) {
 	b.mutex.Lock()
-	l := len(b.b)
+	l := b.size
 	b.mutex.Unlock()
 
 	if l == 0 {
@@ -118,21 +118,14 @@ func NewClient(key *utils.PrivateKey, config utils.Config) (*Client, error) {
 func (c *Client) parseMessage(rm router.Message) {
 	var t struct {
 		Type string `msgpack:"type"`
+		ID   string `msgpack:"id"`
 	}
 	err := msgpack.Unmarshal(rm.Payload, &t)
 	if err != nil {
 		return
 	}
 
-	u := struct {
-		ID string `msgpack:"id"`
-	}{}
-	err = msgpack.Unmarshal(rm.Payload, &u)
-	if err != nil {
-		return
-	}
-
-	id, err := utils.NewNodeIDFromString(u.ID)
+	id, err := utils.NewNodeIDFromString(t.ID)
 	if err != nil {
 		return
 	}
@@ -211,7 +204,7 @@ func (c *Client) Run() {
 			if err != nil {
 				return
 			}
-			c.readch <- m
+			c.parseMessage(m)
 		}
 	}()
 
@@ -228,8 +221,9 @@ func (c *Client) Close() {
 func (c *Client) SendMessage(dst utils.NodeID, msg ChatMessage) error {
 	t := struct {
 		Type    string      `msgpack:"type"`
+		ID      string      `msgpack:"id"`
 		Content interface{} `msgpack:"content"`
-	}{Type: "chat", Content: msg}
+	}{Type: "chat", ID: c.id.String(), Content: msg}
 
 	data, err := msgpack.Marshal(t)
 	if err != nil {
@@ -243,8 +237,9 @@ func (c *Client) SendMessage(dst utils.NodeID, msg ChatMessage) error {
 func (c *Client) SendProfile(dst utils.NodeID) error {
 	t := struct {
 		Type    string      `msgpack:"type"`
+		ID      string      `msgpack:"id"`
 		Content interface{} `msgpack:"content"`
-	}{Type: "prof-res", Content: c.profile}
+	}{Type: "prof-res", ID: c.id.String(), Content: c.profile}
 
 	data, err := msgpack.Marshal(t)
 	if err != nil {
@@ -258,8 +253,9 @@ func (c *Client) SendProfile(dst utils.NodeID) error {
 func (c *Client) SendProfileRequest(dst utils.NodeID) error {
 	t := struct {
 		Type    string      `msgpack:"type"`
+		ID      string      `msgpack:"id"`
 		Content interface{} `msgpack:"content"`
-	}{Type: "prof-req", Content: UserProfileRequest{}}
+	}{Type: "prof-req", ID: c.id.String(), Content: UserProfileRequest{}}
 
 	data, err := msgpack.Marshal(t)
 	if err != nil {
@@ -273,8 +269,9 @@ func (c *Client) SendProfileRequest(dst utils.NodeID) error {
 func (c *Client) SendAck(dst utils.NodeID, id []byte) error {
 	t := struct {
 		Type    string      `msgpack:"type"`
+		ID      string      `msgpack:"id"`
 		Content interface{} `msgpack:"content"`
-	}{Type: "ack", Content: MessageAck{ID: id}}
+	}{Type: "ack", ID: c.id.String(), Content: MessageAck{ID: id}}
 
 	data, err := msgpack.Marshal(t)
 	if err != nil {

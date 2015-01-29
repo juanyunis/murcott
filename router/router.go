@@ -4,6 +4,7 @@ package router
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
 	"sync"
@@ -121,6 +122,7 @@ func (p *Router) SendMessage(dst utils.NodeID, payload []byte) error {
 }
 
 func (p *Router) RecvMessage() (Message, error) {
+	fmt.Println("RecvMessage")
 	if m, ok := <-p.recv; ok {
 		return m, nil
 	}
