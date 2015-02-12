@@ -3,6 +3,7 @@ package murcott
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/h2so5/murcott/log"
@@ -47,6 +48,7 @@ func newMessageBuffer(size int) *messageBuffer {
 func (b *messageBuffer) Push(m readPair) {
 	b.mutex.Lock()
 	index := (b.begin + b.size) % len(b.b)
+	fmt.Println("push", index)
 	b.b[index] = m
 	if b.size < len(b.b) {
 		b.size++
@@ -76,7 +78,8 @@ func (b *messageBuffer) Pop() (readPair, error) {
 
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
-	index := (b.begin + b.size) % len(b.b)
+	index := b.begin % len(b.b)
+	fmt.Println("pop", index)
 	m := b.b[index]
 	b.begin = (b.begin + 1) % len(b.b)
 	b.size--
