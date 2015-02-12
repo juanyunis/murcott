@@ -120,6 +120,24 @@ func (p *Router) SendMessage(dst utils.NodeID, payload []byte) error {
 	return nil
 }
 
+func (p *Router) SendPing() {
+	var list []utils.NodeID
+
+	p.sessionMutex.RLock()
+	for str, _ := range p.sessions {
+		id, _ := utils.NewNodeIDFromString(str)
+		list = append(list, id)
+	}
+	p.sessionMutex.RUnlock()
+
+	for _, id := range list {
+		pkt, err := p.makePacket(id, "ping", nil)
+		if err == nil {
+			p.send <- pkt
+		}
+	}
+}
+
 func (p *Router) RecvMessage() (Message, error) {
 	if m, ok := <-p.recv; ok {
 		return m, nil
@@ -174,7 +192,7 @@ func (p *Router) run() {
 			if s != nil {
 				err := s.Write(pkt)
 				if err != nil {
-					p.logger.Error("%v", err)
+					p.logger.Error("Remove session(%s): %v", pkt.Dst.String(), err)
 					p.removeSession(s)
 					p.queuedPackets = append(p.queuedPackets, pkt)
 				}
@@ -183,6 +201,7 @@ func (p *Router) run() {
 				p.queuedPackets = append(p.queuedPackets, pkt)
 			}
 		case <-time.After(time.Second):
+			p.SendPing()
 			var rest []internal.Packet
 			for _, pkt := range p.queuedPackets {
 				p.dhtMutex.RLock()
@@ -194,7 +213,7 @@ func (p *Router) run() {
 				if s != nil {
 					err := s.Write(pkt)
 					if err != nil {
-						p.logger.Error("%v", err)
+						p.logger.Error("Remove session(%s): %v", pkt.Dst.String(), err)
 						p.removeSession(s)
 						p.queuedPackets = append(p.queuedPackets, pkt)
 					}
@@ -231,7 +250,7 @@ func (p *Router) readSession(s *session) {
 	for {
 		pkt, err := s.Read()
 		if err != nil {
-			p.logger.Error("%v", err)
+			p.logger.Error("Remove session(%s): %v", pkt.Dst.String(), err)
 			p.removeSession(s)
 			return
 		}
