@@ -343,6 +343,18 @@ func (p *Router) AddNode(info utils.NodeInfo) {
 	}
 }
 
+func (p *Router) ActiveSessions() []utils.NodeInfo {
+	var nodes []utils.NodeInfo
+	p.sessionMutex.RLock()
+	defer p.sessionMutex.RUnlock()
+	for _, n := range p.KnownNodes() {
+		if _, ok := p.sessions[n.ID.String()]; ok {
+			nodes = append(nodes, n)
+		}
+	}
+	return nodes
+}
+
 func (p *Router) KnownNodes() []utils.NodeInfo {
 	var nodes []utils.NodeInfo
 	for _, d := range p.dht {

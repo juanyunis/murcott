@@ -287,6 +287,10 @@ func (c *Client) ID() utils.NodeID {
 	return c.id
 }
 
+func (c *Client) ActiveSessions() []utils.NodeInfo {
+	return c.router.ActiveSessions()
+}
+
 func (c *Client) KnownNodes() []utils.NodeInfo {
 	return c.router.KnownNodes()
 }

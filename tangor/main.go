@@ -42,6 +42,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer client.Close()
 
 	filename := filepath.Join(path, id.Digest.String()+".dat")
 	data, err := ioutil.ReadFile(filename)
@@ -207,8 +208,8 @@ func (s *Session) commandLoop() {
 				}
 			}
 		case "/stat":
-			nodes := s.cli.KnownNodes()
-			color.Printf("  * Known nodes (%d) *\n", len(nodes))
+			nodes := s.cli.ActiveSessions()
+			color.Printf("  * active sessions (%d) *\n", len(nodes))
 			for _, n := range nodes {
 				color.Printf(" %v\n", n)
 			}
