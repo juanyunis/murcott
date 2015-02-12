@@ -42,7 +42,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer client.Close()
 
 	filename := filepath.Join(path, id.Digest.String()+".dat")
 	data, err := ioutil.ReadFile(filename)
@@ -51,27 +50,22 @@ func main() {
 	}
 
 	exit := make(chan int)
+	s := Session{cli: client}
+
 	go func() {
 		for {
 			select {
 			case <-exit:
-				data, err := client.MarshalBinary()
-				if err == nil {
-					ioutil.WriteFile(filename, data, 0755)
-				}
 				return
 			case <-time.After(time.Minute):
-				data, err := client.MarshalBinary()
-				if err == nil {
-					ioutil.WriteFile(filename, data, 0755)
-				}
+				s.save(filename)
 			}
 		}
 	}()
 
-	s := Session{cli: client}
 	s.bootstrap()
 	s.commandLoop()
+	s.save(filename)
 	close(exit)
 }
 
@@ -128,6 +122,14 @@ func (s *Session) bootstrap() {
 		color.Printf(" -> @{Yk}WARNING:@{|} node not found\n")
 	}
 	fmt.Println()
+}
+
+func (s *Session) save(filename string) error {
+	data, err := s.cli.MarshalBinary()
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filename, data, 0755)
 }
 
 func (s *Session) commandLoop() {
