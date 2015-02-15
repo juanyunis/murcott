@@ -23,7 +23,8 @@ type Message struct {
 }
 
 type Router struct {
-	dht      map[utils.Namespace]*dht.DHT
+	mainDht  *dht.DHT
+	groupDht map[utils.Namespace]*dht.DHT
 	dhtMutex sync.RWMutex
 
 	listener *utp.Listener
@@ -61,20 +62,20 @@ func NewRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 	logger.Info("Node ID: %s", key.Digest().String())
 	logger.Info("Node Socket: %v", listener.Addr())
 
+	ns := utils.GlobalNamespace
+
 	r := Router{
 		listener: listener,
 		key:      key,
 		sessions: make(map[string]*session),
-		dht:      make(map[utils.Namespace]*dht.DHT),
+		mainDht:  dht.NewDHT(10, utils.NewNodeID(ns, key.Digest()), listener.RawConn, logger),
+		groupDht: make(map[utils.Namespace]*dht.DHT),
 
 		logger: logger,
 		recv:   make(chan Message, 100),
 		send:   make(chan internal.Packet, 100),
 		exit:   exit,
 	}
-
-	ns := utils.GlobalNamespace
-	r.dht[ns] = dht.NewDHT(10, utils.NewNodeID(ns, key.Digest()), listener.RawConn, logger)
 
 	go r.run()
 	return &r, nil
@@ -84,7 +85,8 @@ func (p *Router) Discover(addrs []net.UDPAddr) {
 	p.dhtMutex.RLock()
 	defer p.dhtMutex.RUnlock()
 	for _, addr := range addrs {
-		for _, d := range p.dht {
+		p.mainDht.Discover(&addr)
+		for _, d := range p.groupDht {
 			d.Discover(&addr)
 		}
 		p.logger.Info("Sent discovery packet to %v:%d", addr.IP, addr.Port)
@@ -94,8 +96,8 @@ func (p *Router) Discover(addrs []net.UDPAddr) {
 func (p *Router) Join(group utils.NodeID) error {
 	p.dhtMutex.Lock()
 	defer p.dhtMutex.Unlock()
-	if _, ok := p.dht[group.NS]; !ok {
-		p.dht[group.NS] = dht.NewDHT(10, group, p.listener.RawConn, p.logger)
+	if _, ok := p.groupDht[group.NS]; !ok {
+		p.groupDht[group.NS] = dht.NewDHT(10, group, p.listener.RawConn, p.logger)
 		return nil
 	}
 	return errors.New("already joined")
@@ -104,8 +106,8 @@ func (p *Router) Join(group utils.NodeID) error {
 func (p *Router) Leave(group utils.NodeID) error {
 	p.dhtMutex.Lock()
 	defer p.dhtMutex.Unlock()
-	if _, ok := p.dht[group.NS]; ok {
-		delete(p.dht, group.NS)
+	if _, ok := p.groupDht[group.NS]; ok {
+		delete(p.groupDht, group.NS)
 		return nil
 	}
 	return errors.New("not joined")
@@ -176,7 +178,8 @@ func (p *Router) run() {
 				return
 			}
 			p.dhtMutex.RLock()
-			for _, d := range p.dht {
+			p.mainDht.ProcessPacket(b[:l], addr)
+			for _, d := range p.groupDht {
 				d.ProcessPacket(b[:l], addr)
 			}
 			p.dhtMutex.RUnlock()
@@ -205,7 +208,8 @@ func (p *Router) run() {
 			var rest []internal.Packet
 			for _, pkt := range p.queuedPackets {
 				p.dhtMutex.RLock()
-				for _, d := range p.dht {
+				p.mainDht.FindNearestNode(pkt.Dst)
+				for _, d := range p.groupDht {
 					d.FindNearestNode(pkt.Dst)
 				}
 				p.dhtMutex.RUnlock()
@@ -257,7 +261,7 @@ func (p *Router) readSession(s *session) {
 		ns := utils.GlobalNamespace
 		if !bytes.Equal(pkt.Src.NS[:], ns[:]) {
 			p.dhtMutex.RLock()
-			if d, ok := p.dht[pkt.Src.NS]; ok {
+			if d, ok := p.groupDht[pkt.Src.NS]; ok {
 				pkt.TTL--
 				if pkt.TTL > 0 {
 					for _, n := range d.KnownNodes() {
@@ -288,10 +292,13 @@ func (p *Router) getSession(id utils.NodeID) *session {
 
 	var info *utils.NodeInfo
 	p.dhtMutex.RLock()
-	for _, d := range p.dht {
-		info = d.GetNodeInfo(id)
-		if info != nil {
-			break
+	info = p.mainDht.GetNodeInfo(id)
+	if info == nil {
+		for _, d := range p.groupDht {
+			info = d.GetNodeInfo(id)
+			if info != nil {
+				break
+			}
 		}
 	}
 	p.dhtMutex.RUnlock()
@@ -338,7 +345,8 @@ func (p *Router) makePacket(dst utils.NodeID, typ string, payload []byte) (inter
 func (p *Router) AddNode(info utils.NodeInfo) {
 	p.dhtMutex.RLock()
 	defer p.dhtMutex.RUnlock()
-	for _, d := range p.dht {
+	p.mainDht.AddNode(info)
+	for _, d := range p.groupDht {
 		d.AddNode(info)
 	}
 }
@@ -357,7 +365,8 @@ func (p *Router) ActiveSessions() []utils.NodeInfo {
 
 func (p *Router) KnownNodes() []utils.NodeInfo {
 	var nodes []utils.NodeInfo
-	for _, d := range p.dht {
+	nodes = append(nodes, p.mainDht.KnownNodes()...)
+	for _, d := range p.groupDht {
 		nodes = append(nodes, d.KnownNodes()...)
 	}
 	return nodes
@@ -365,7 +374,8 @@ func (p *Router) KnownNodes() []utils.NodeInfo {
 
 func (p *Router) Close() {
 	p.exit <- 0
-	for _, d := range p.dht {
+	p.mainDht.Close()
+	for _, d := range p.groupDht {
 		d.Close()
 	}
 }
