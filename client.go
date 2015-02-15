@@ -170,7 +170,7 @@ func (c *Client) parseMessage(rm router.Message) {
 
 	if m != nil && t.Type != "ack" {
 		c.mbuf.Push(readPair{M: m, ID: rm.Node})
-		c.SendAck(rm.Node, rm.ID)
+		c.sendAck(rm.Node, rm.ID)
 	}
 }
 
@@ -267,7 +267,7 @@ func (c *Client) SendProfileRequest(dst utils.NodeID) error {
 	return nil
 }
 
-func (c *Client) SendAck(dst utils.NodeID, id []byte) error {
+func (c *Client) sendAck(dst utils.NodeID, id []byte) error {
 	t := struct {
 		Type    string      `msgpack:"type"`
 		ID      string      `msgpack:"id"`
