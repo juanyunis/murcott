@@ -85,7 +85,7 @@ func (p *DHT) ProcessPacket(b []byte, addr net.Addr) {
 
 	switch c.Method {
 	case "ping":
-		p.logger.Info("%s: Receive DHT Ping from %s", p.id.String(), c.Src.String())
+		p.logger.Info("%s: Receive DHT Ping from %s %v", p.id.String(), c.Src.String(), addr)
 		p.sendPacket(c.Src, newRPCReturnCommand(c.ID, nil))
 
 	case "find-node":

@@ -118,45 +118,42 @@ func TestRouterGroup(t *testing.T) {
 
 	logger := log.NewLogger()
 
-	key1 := utils.GeneratePrivateKey()
-	key2 := utils.GeneratePrivateKey()
-	key3 := utils.GeneratePrivateKey()
-	key4 := utils.GeneratePrivateKey()
-	key5 := utils.GeneratePrivateKey()
+	gkey1 := utils.GeneratePrivateKey()
+	gkey2 := utils.GeneratePrivateKey()
 
-	router1, err := NewRouter(key1, logger, config)
+	router1, err := NewRouter(utils.GeneratePrivateKey(), logger, config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router1.Join(utils.NewNodeID([4]byte{1, 1, 1, 2}, key1.Digest()))
+	router1.Join(utils.NewNodeID([4]byte{1, 1, 1, 2}, gkey1.Digest()))
 	defer router1.Close()
 
-	router2, err := NewRouter(key2, logger, config)
+	router2, err := NewRouter(utils.GeneratePrivateKey(), logger, config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router2.Join(utils.NewNodeID([4]byte{1, 1, 1, 2}, key2.Digest()))
+	router2.Join(utils.NewNodeID([4]byte{1, 1, 1, 2}, gkey1.Digest()))
 	defer router2.Close()
 
-	router3, err := NewRouter(key3, logger, config)
+	router3, err := NewRouter(utils.GeneratePrivateKey(), logger, config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router3.Join(utils.NewNodeID([4]byte{1, 1, 1, 2}, key3.Digest()))
+	router3.Join(utils.NewNodeID([4]byte{1, 1, 1, 2}, gkey1.Digest()))
 	defer router3.Close()
 
-	router4, err := NewRouter(key4, logger, config)
+	router4, err := NewRouter(utils.GeneratePrivateKey(), logger, config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router4.Join(utils.NewNodeID([4]byte{1, 1, 1, 3}, key4.Digest()))
+	router4.Join(utils.NewNodeID([4]byte{1, 1, 1, 3}, gkey2.Digest()))
 	defer router4.Close()
 
-	router5, err := NewRouter(key5, logger, config)
+	router5, err := NewRouter(utils.GeneratePrivateKey(), logger, config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router5.Join(utils.NewNodeID([4]byte{1, 1, 1, 3}, key5.Digest()))
+	router5.Join(utils.NewNodeID([4]byte{1, 1, 1, 3}, gkey2.Digest()))
 	defer router5.Close()
 
 	router1.Discover(utils.DefaultConfig.Bootstrap())
@@ -168,7 +165,7 @@ func TestRouterGroup(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	msg := "The quick brown fox jumps over the lazy dog"
-	router3.SendMessage(utils.NewNodeID([4]byte{1, 1, 1, 2}, key1.Digest()), []byte(msg))
+	router3.SendMessage(utils.NewNodeID([4]byte{1, 1, 1, 2}, gkey1.Digest()), []byte(msg))
 
 	{
 		m, err := router1.RecvMessage()

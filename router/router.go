@@ -24,7 +24,7 @@ type Message struct {
 
 type Router struct {
 	mainDht  *dht.DHT
-	groupDht map[utils.Namespace]*dht.DHT
+	groupDht map[string]*dht.DHT
 	dhtMutex sync.RWMutex
 
 	listener *utp.Listener
@@ -63,13 +63,14 @@ func NewRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 	logger.Info("Node Socket: %v", listener.Addr())
 
 	ns := utils.GlobalNamespace
+	id := utils.NewNodeID(ns, key.Digest())
 
 	r := Router{
 		listener: listener,
 		key:      key,
 		sessions: make(map[string]*session),
-		mainDht:  dht.NewDHT(10, utils.NewNodeID(ns, key.Digest()), listener.RawConn, logger),
-		groupDht: make(map[utils.Namespace]*dht.DHT),
+		mainDht:  dht.NewDHT(10, id, listener.RawConn, logger),
+		groupDht: make(map[string]*dht.DHT),
 
 		logger: logger,
 		recv:   make(chan Message, 100),
@@ -96,8 +97,8 @@ func (p *Router) Discover(addrs []net.UDPAddr) {
 func (p *Router) Join(group utils.NodeID) error {
 	p.dhtMutex.Lock()
 	defer p.dhtMutex.Unlock()
-	if _, ok := p.groupDht[group.NS]; !ok {
-		p.groupDht[group.NS] = dht.NewDHT(10, group, p.listener.RawConn, p.logger)
+	if _, ok := p.groupDht[group.String()]; !ok {
+		p.groupDht[group.String()] = dht.NewDHT(10, p.ID(), p.listener.RawConn, p.logger)
 		return nil
 	}
 	return errors.New("already joined")
@@ -106,8 +107,8 @@ func (p *Router) Join(group utils.NodeID) error {
 func (p *Router) Leave(group utils.NodeID) error {
 	p.dhtMutex.Lock()
 	defer p.dhtMutex.Unlock()
-	if _, ok := p.groupDht[group.NS]; ok {
-		delete(p.groupDht, group.NS)
+	if _, ok := p.groupDht[group.String()]; ok {
+		delete(p.groupDht, group.String())
 		return nil
 	}
 	return errors.New("not joined")
@@ -191,13 +192,15 @@ func (p *Router) run() {
 		case s := <-acceptch:
 			p.addSession(s)
 		case pkt := <-p.send:
-			s := p.getSession(pkt.Dst)
-			if s != nil {
-				err := s.Write(pkt)
-				if err != nil {
-					p.logger.Error("Remove session(%s): %v", pkt.Dst.String(), err)
-					p.removeSession(s)
-					p.queuedPackets = append(p.queuedPackets, pkt)
+			sessions := p.getSessions(pkt.Dst)
+			if len(sessions) > 0 {
+				for _, s := range sessions {
+					err := s.Write(pkt)
+					if err != nil {
+						p.logger.Error("Remove session(%s): %v", pkt.Dst.String(), err)
+						p.removeSession(s)
+						p.queuedPackets = append(p.queuedPackets, pkt)
+					}
 				}
 			} else {
 				p.logger.Error("Route not found: %v", pkt.Dst)
@@ -213,13 +216,15 @@ func (p *Router) run() {
 					d.FindNearestNode(pkt.Dst)
 				}
 				p.dhtMutex.RUnlock()
-				s := p.getSession(pkt.Dst)
-				if s != nil {
-					err := s.Write(pkt)
-					if err != nil {
-						p.logger.Error("Remove session(%s): %v", pkt.Dst.String(), err)
-						p.removeSession(s)
-						p.queuedPackets = append(p.queuedPackets, pkt)
+				sessions := p.getSessions(pkt.Dst)
+				if len(sessions) > 0 {
+					for _, s := range sessions {
+						err := s.Write(pkt)
+						if err != nil {
+							p.logger.Error("Remove session(%s): %v", pkt.Dst.String(), err)
+							p.removeSession(s)
+							p.queuedPackets = append(p.queuedPackets, pkt)
+						}
 					}
 				} else {
 					p.logger.Error("Route not found: %v", pkt.Dst)
@@ -261,12 +266,12 @@ func (p *Router) readSession(s *session) {
 		ns := utils.GlobalNamespace
 		if !bytes.Equal(pkt.Src.NS[:], ns[:]) {
 			p.dhtMutex.RLock()
-			if d, ok := p.groupDht[pkt.Src.NS]; ok {
+			if d, ok := p.groupDht[pkt.Src.String()]; ok {
 				pkt.TTL--
 				if pkt.TTL > 0 {
 					for _, n := range d.KnownNodes() {
-						s := p.getSession(n.ID)
-						if s != nil {
+						sessions := p.getSessions(n.ID)
+						for _, s := range sessions {
 							s.Write(pkt)
 						}
 					}
@@ -281,7 +286,27 @@ func (p *Router) readSession(s *session) {
 	}
 }
 
-func (p *Router) getSession(id utils.NodeID) *session {
+func (p *Router) getSessions(id utils.NodeID) []*session {
+	var sessions []*session
+	if bytes.Equal(id.NS[:], utils.GlobalNamespace[:]) {
+		s := p.getDirectSession(id)
+		if s != nil {
+			sessions = append(sessions, s)
+		}
+	} else {
+		if d, ok := p.groupDht[id.String()]; ok {
+			for _, n := range d.KnownNodes() {
+				s := p.getDirectSession(n.ID)
+				if s != nil {
+					sessions = append(sessions, s)
+				}
+			}
+		}
+	}
+	return sessions
+}
+
+func (p *Router) getDirectSession(id utils.NodeID) *session {
 	idstr := id.String()
 	p.sessionMutex.RLock()
 	if s, ok := p.sessions[idstr]; ok {
@@ -370,6 +395,11 @@ func (p *Router) KnownNodes() []utils.NodeInfo {
 		nodes = append(nodes, d.KnownNodes()...)
 	}
 	return nodes
+}
+
+func (p *Router) ID() utils.NodeID {
+	ns := utils.GlobalNamespace
+	return utils.NewNodeID(ns, p.key.Digest())
 }
 
 func (p *Router) Close() {
