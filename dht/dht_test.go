@@ -52,8 +52,8 @@ func TestDhtPing(t *testing.T) {
 	node1 := utils.NodeInfo{ID: utils.NewRandomNodeID(namespace), Addr: addr1}
 	node2 := utils.NodeInfo{ID: utils.NewRandomNodeID(namespace), Addr: addr2}
 
-	dht1 := NewDHT(10, node1.ID, utp1.RawConn, log.NewLogger())
-	dht2 := NewDHT(10, node2.ID, utp2.RawConn, log.NewLogger())
+	dht1 := NewDHT(10, node1.ID, node1.ID, utp1.RawConn, log.NewLogger())
+	dht2 := NewDHT(10, node2.ID, node2.ID, utp2.RawConn, log.NewLogger())
 	defer dht1.Close()
 	defer dht2.Close()
 
@@ -111,7 +111,7 @@ func TestDhtGroup(t *testing.T) {
 			t.Fatal(err)
 		}
 		node := utils.NodeInfo{ID: id, Addr: uaddr}
-		d := NewDHT(10, node.ID, utp.RawConn, logger)
+		d := NewDHT(10, node.ID, node.ID, utp.RawConn, logger)
 		idary[i] = node
 		dhtmap[id.String()] = d
 		defer d.Close()
