@@ -24,10 +24,11 @@ type dhtRPCReturn struct {
 }
 
 type DHT struct {
-	id    utils.NodeID
-	net   utils.NodeID
-	table nodeTable
-	k     int
+	id         utils.NodeID
+	net        utils.NodeID
+	table      nodeTable
+	groupTable nodeTable
+	k          int
 
 	kvs      map[string]string
 	kvsMutex sync.RWMutex
@@ -57,14 +58,15 @@ func (p *dhtRPCCommand) getArgs(k string, v ...interface{}) {
 
 func NewDHT(k int, id, net utils.NodeID, conn net.PacketConn, logger *log.Logger) *DHT {
 	d := DHT{
-		id:     id,
-		net:    net,
-		table:  newNodeTable(k, id),
-		k:      k,
-		kvs:    make(map[string]string),
-		chmap:  make(map[string]chan<- dhtRPCReturn),
-		conn:   conn,
-		logger: logger,
+		id:         id,
+		net:        net,
+		table:      newNodeTable(k, id),
+		groupTable: newNodeTable(k, id),
+		k:          k,
+		kvs:        make(map[string]string),
+		chmap:      make(map[string]chan<- dhtRPCReturn),
+		conn:       conn,
+		logger:     logger,
 	}
 	return &d
 }
@@ -78,8 +80,14 @@ func (p *DHT) ProcessPacket(b []byte, addr net.Addr) {
 	}
 
 	ns := utils.GlobalNamespace
-	if !bytes.Equal(p.net.NS[:], ns[:]) && p.net.Digest.Cmp(c.Net.Digest) != 0 {
-		return
+	if bytes.Equal(p.net.NS[:], ns[:]) {
+		if !bytes.Equal(c.Net.NS[:], ns[:]) {
+			p.groupTable.insert(utils.NodeInfo{ID: c.Net, Addr: addr})
+		}
+	} else {
+		if p.net.Digest.Cmp(c.Net.Digest) != 0 {
+			return
+		}
 	}
 
 	p.table.insert(utils.NodeInfo{ID: c.Src, Addr: addr})
@@ -97,7 +105,8 @@ func (p *DHT) ProcessPacket(b []byte, addr net.Addr) {
 			if err != nil {
 				p.logger.Error("find-node: %v", err)
 			} else {
-				args["nodes"] = p.table.nearestNodes(nid)
+				nodes := append(p.table.nearestNodes(nid), p.groupTable.nearestNodes(nid)...)
+				args["nodes"] = nodes
 				p.sendPacket(c.Src, p.newRPCReturnCommand(c.ID, args))
 			}
 		}
@@ -140,10 +149,6 @@ func (p *DHT) ProcessPacket(b []byte, addr net.Addr) {
 }
 
 func (p *DHT) FindNearestNode(findid utils.NodeID) []utils.NodeInfo {
-	if !p.id.NS.Match(findid.NS) {
-		return nil
-	}
-
 	reqch := make(chan utils.NodeInfo, 100)
 	endch := make(chan struct{}, 100)
 
@@ -176,14 +181,14 @@ func (p *DHT) FindNearestNode(findid utils.NodeID) []utils.NodeInfo {
 	}
 
 	count := 0
-	requested := make(map[string]utils.NodeInfo)
+	requested := make(map[utils.NodeID]utils.NodeInfo)
 
 loop:
 	for {
 		select {
 		case node := <-reqch:
-			if _, ok := requested[node.ID.Digest.String()]; !ok {
-				requested[node.ID.Digest.String()] = node
+			if _, ok := requested[node.ID]; !ok {
+				requested[node.ID] = node
 				c := p.newRPCCommand("find-node", map[string]interface{}{
 					"id": string(findid.Bytes()),
 				})
@@ -258,13 +263,13 @@ func (p *DHT) LoadValue(key string) *string {
 	}
 
 	count := 0
-	requested := make(map[string]struct{})
+	requested := make(map[utils.NodeID]struct{})
 
 	for {
 		select {
 		case id := <-reqch:
-			if _, ok := requested[id.Digest.String()]; !ok {
-				requested[id.Digest.String()] = struct{}{}
+			if _, ok := requested[id]; !ok {
+				requested[id] = struct{}{}
 				c := p.newRPCCommand("find-value", map[string]interface{}{
 					"key": key,
 				})
