@@ -25,13 +25,13 @@ type Message struct {
 type Router struct {
 	id       utils.NodeID
 	mainDht  *dht.DHT
-	groupDht map[string]*dht.DHT
+	groupDht map[utils.NodeID]*dht.DHT
 	dhtMutex sync.RWMutex
 
 	listener *utp.Listener
 	key      *utils.PrivateKey
 
-	sessions     map[string]*session
+	sessions     map[utils.NodeID]*session
 	sessionMutex sync.RWMutex
 
 	queuedPackets []internal.Packet
@@ -70,9 +70,9 @@ func NewRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 		id:       id,
 		listener: listener,
 		key:      key,
-		sessions: make(map[string]*session),
+		sessions: make(map[utils.NodeID]*session),
 		mainDht:  dht.NewDHT(10, id, id, listener.RawConn, logger),
-		groupDht: make(map[string]*dht.DHT),
+		groupDht: make(map[utils.NodeID]*dht.DHT),
 
 		logger: logger,
 		recv:   make(chan Message, 100),
@@ -99,8 +99,8 @@ func (p *Router) Discover(addrs []net.UDPAddr) {
 func (p *Router) Join(group utils.NodeID) error {
 	p.dhtMutex.Lock()
 	defer p.dhtMutex.Unlock()
-	if _, ok := p.groupDht[group.String()]; !ok {
-		p.groupDht[group.String()] = dht.NewDHT(10, p.ID(), group, p.listener.RawConn, p.logger)
+	if _, ok := p.groupDht[group]; !ok {
+		p.groupDht[group] = dht.NewDHT(10, p.ID(), group, p.listener.RawConn, p.logger)
 		return nil
 	}
 	return errors.New("already joined")
@@ -109,8 +109,8 @@ func (p *Router) Join(group utils.NodeID) error {
 func (p *Router) Leave(group utils.NodeID) error {
 	p.dhtMutex.Lock()
 	defer p.dhtMutex.Unlock()
-	if _, ok := p.groupDht[group.String()]; ok {
-		delete(p.groupDht, group.String())
+	if _, ok := p.groupDht[group]; ok {
+		delete(p.groupDht, group)
 		return nil
 	}
 	return errors.New("not joined")
@@ -129,8 +129,7 @@ func (p *Router) SendPing() {
 	var list []utils.NodeID
 
 	p.sessionMutex.RLock()
-	for str, _ := range p.sessions {
-		id, _ := utils.NewNodeIDFromString(str)
+	for id, _ := range p.sessions {
 		list = append(list, id)
 	}
 	p.sessionMutex.RUnlock()
@@ -244,7 +243,7 @@ func (p *Router) run() {
 func (p *Router) addSession(s *session) {
 	p.sessionMutex.Lock()
 	defer p.sessionMutex.Unlock()
-	id := s.ID().String()
+	id := s.ID()
 	if _, ok := p.sessions[id]; !ok {
 		p.sessions[id] = s
 	}
@@ -253,8 +252,7 @@ func (p *Router) addSession(s *session) {
 func (p *Router) removeSession(s *session) {
 	p.sessionMutex.Lock()
 	defer p.sessionMutex.Unlock()
-	id := s.ID().String()
-	delete(p.sessions, id)
+	delete(p.sessions, s.ID())
 }
 
 func (p *Router) readSession(s *session) {
@@ -268,7 +266,7 @@ func (p *Router) readSession(s *session) {
 		ns := utils.GlobalNamespace
 		if !bytes.Equal(pkt.Src.NS[:], ns[:]) {
 			p.dhtMutex.RLock()
-			if d, ok := p.groupDht[pkt.Dst.String()]; ok {
+			if d, ok := p.groupDht[pkt.Dst]; ok {
 				pkt.TTL--
 				if pkt.TTL > 0 {
 					for _, n := range d.KnownNodes() {
@@ -296,7 +294,7 @@ func (p *Router) getSessions(id utils.NodeID) []*session {
 			sessions = append(sessions, s)
 		}
 	} else {
-		if d, ok := p.groupDht[id.String()]; ok {
+		if d, ok := p.groupDht[id]; ok {
 			for _, n := range d.KnownNodes() {
 				s := p.getDirectSession(n.ID)
 				if s != nil {
@@ -309,9 +307,8 @@ func (p *Router) getSessions(id utils.NodeID) []*session {
 }
 
 func (p *Router) getDirectSession(id utils.NodeID) *session {
-	idstr := id.String()
 	p.sessionMutex.RLock()
-	if s, ok := p.sessions[idstr]; ok {
+	if s, ok := p.sessions[id]; ok {
 		p.sessionMutex.RUnlock()
 		return s
 	}
@@ -383,7 +380,7 @@ func (p *Router) ActiveSessions() []utils.NodeInfo {
 	p.sessionMutex.RLock()
 	defer p.sessionMutex.RUnlock()
 	for _, n := range p.KnownNodes() {
-		if _, ok := p.sessions[n.ID.String()]; ok {
+		if _, ok := p.sessions[n.ID]; ok {
 			nodes = append(nodes, n)
 		}
 	}
