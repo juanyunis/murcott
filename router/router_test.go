@@ -125,35 +125,35 @@ func TestRouterGroup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	router1.Join(utils.NewNodeID([4]byte{1, 1, 1, 2}, gkey1.Digest()))
+	router1.Join(utils.NewNodeID(utils.GroupNamespace, gkey1.Digest()))
 	defer router1.Close()
 
 	router2, err := NewRouter(utils.GeneratePrivateKey(), logger, config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router2.Join(utils.NewNodeID([4]byte{1, 1, 1, 2}, gkey1.Digest()))
+	router2.Join(utils.NewNodeID(utils.GroupNamespace, gkey1.Digest()))
 	defer router2.Close()
 
 	router3, err := NewRouter(utils.GeneratePrivateKey(), logger, config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router3.Join(utils.NewNodeID([4]byte{1, 1, 1, 2}, gkey1.Digest()))
+	router3.Join(utils.NewNodeID(utils.GroupNamespace, gkey1.Digest()))
 	defer router3.Close()
 
 	router4, err := NewRouter(utils.GeneratePrivateKey(), logger, config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router4.Join(utils.NewNodeID([4]byte{1, 1, 1, 3}, gkey2.Digest()))
+	router4.Join(utils.NewNodeID(utils.GroupNamespace, gkey2.Digest()))
 	defer router4.Close()
 
 	router5, err := NewRouter(utils.GeneratePrivateKey(), logger, config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	router5.Join(utils.NewNodeID([4]byte{1, 1, 1, 3}, gkey2.Digest()))
+	router5.Join(utils.NewNodeID(utils.GroupNamespace, gkey2.Digest()))
 	defer router5.Close()
 
 	router1.Discover(utils.DefaultConfig.Bootstrap())
@@ -165,7 +165,7 @@ func TestRouterGroup(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	msg := "The quick brown fox jumps over the lazy dog"
-	router3.SendMessage(utils.NewNodeID([4]byte{1, 1, 1, 2}, gkey1.Digest()), []byte(msg))
+	router3.SendMessage(utils.NewNodeID(utils.GroupNamespace, gkey1.Digest()), []byte(msg))
 
 	{
 		m, err := router1.RecvMessage()
@@ -176,8 +176,7 @@ func TestRouterGroup(t *testing.T) {
 			t.Errorf("router1: wrong source id")
 		}
 
-		ns := [4]byte{1, 1, 1, 2}
-		if !bytes.Equal(m.Node.NS[:], ns[:]) {
+		if !bytes.Equal(m.Node.NS[:], utils.GroupNamespace[:]) {
 			t.Errorf("router1: wrong namespace")
 		}
 		if string(m.Payload) != msg {
@@ -194,8 +193,7 @@ func TestRouterGroup(t *testing.T) {
 			t.Errorf("router2: wrong source id")
 		}
 
-		ns := [4]byte{1, 1, 1, 2}
-		if !bytes.Equal(m.Node.NS[:], ns[:]) {
+		if !bytes.Equal(m.Node.NS[:], utils.GroupNamespace[:]) {
 			t.Errorf("router2: wrong namespace")
 		}
 		if string(m.Payload) != msg {

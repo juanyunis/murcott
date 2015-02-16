@@ -12,6 +12,7 @@ import (
 const NodeIDPrefix = 144
 
 var GlobalNamespace Namespace = [4]byte{0, 0, 0, 0}
+var GroupNamespace Namespace = [4]byte{1, 0, 0, 0}
 
 func init() {
 	msgpack.Register(reflect.TypeOf(NodeID{}),

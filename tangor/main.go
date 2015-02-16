@@ -177,6 +177,7 @@ func (s *Session) commandLoop() {
 				if err != nil {
 					color.Printf(" -> @{Rk}ERROR:@{|} invalid ID\n")
 				} else {
+					s.cli.Join(nid)
 					chatID = &nid
 					color.Printf(" -> Start a chat with @{Wk} %s @{|}\n\n", nid.String())
 				}
