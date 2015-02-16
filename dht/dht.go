@@ -2,6 +2,7 @@
 package dht
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/sha1"
 	"errors"
@@ -24,6 +25,7 @@ type dhtRPCReturn struct {
 
 type DHT struct {
 	id    utils.NodeID
+	net   utils.NodeID
 	table nodeTable
 	k     int
 
@@ -40,6 +42,7 @@ type DHT struct {
 
 type dhtRPCCommand struct {
 	Src    utils.NodeID           `msgpack:"src"`
+	Net    utils.NodeID           `msgpack:"net"`
 	ID     []byte                 `msgpack:"id"`
 	Method string                 `msgpack:"method"`
 	Args   map[string]interface{} `msgpack:"args"`
@@ -52,9 +55,10 @@ func (p *dhtRPCCommand) getArgs(k string, v ...interface{}) {
 	}
 }
 
-func NewDHT(k int, id utils.NodeID, conn net.PacketConn, logger *log.Logger) *DHT {
+func NewDHT(k int, id, net utils.NodeID, conn net.PacketConn, logger *log.Logger) *DHT {
 	d := DHT{
 		id:     id,
+		net:    net,
 		table:  newNodeTable(k, id),
 		k:      k,
 		kvs:    make(map[string]string),
@@ -73,11 +77,8 @@ func (p *DHT) ProcessPacket(b []byte, addr net.Addr) {
 		return
 	}
 
-	if !p.id.NS.Match(c.Src.NS) {
-		return
-	}
-
-	if p.id.Digest.Cmp(c.Src.Digest) == 0 {
+	ns := utils.GlobalNamespace
+	if !bytes.Equal(p.net.NS[:], ns[:]) && p.net.Digest.Cmp(c.Net.Digest) != 0 {
 		return
 	}
 
@@ -86,7 +87,7 @@ func (p *DHT) ProcessPacket(b []byte, addr net.Addr) {
 	switch c.Method {
 	case "ping":
 		p.logger.Info("%s: Receive DHT Ping from %s %v", p.id.String(), c.Src.String(), addr)
-		p.sendPacket(c.Src, newRPCReturnCommand(c.ID, nil))
+		p.sendPacket(c.Src, p.newRPCReturnCommand(c.ID, nil))
 
 	case "find-node":
 		p.logger.Info("%s: Receive DHT Find-Node from %s", p.id.String(), c.Src.String())
@@ -97,7 +98,7 @@ func (p *DHT) ProcessPacket(b []byte, addr net.Addr) {
 				p.logger.Error("find-node: %v", err)
 			} else {
 				args["nodes"] = p.table.nearestNodes(nid)
-				p.sendPacket(c.Src, newRPCReturnCommand(c.ID, args))
+				p.sendPacket(c.Src, p.newRPCReturnCommand(c.ID, args))
 			}
 		}
 
@@ -124,7 +125,7 @@ func (p *DHT) ProcessPacket(b []byte, addr net.Addr) {
 				args["nodes"] = n
 			}
 			p.kvsMutex.RUnlock()
-			p.sendPacket(c.Src, newRPCReturnCommand(c.ID, args))
+			p.sendPacket(c.Src, p.newRPCReturnCommand(c.ID, args))
 		}
 
 	case "": // callback
@@ -183,7 +184,7 @@ loop:
 		case node := <-reqch:
 			if _, ok := requested[node.ID.Digest.String()]; !ok {
 				requested[node.ID.Digest.String()] = node
-				c := newRPCCommand("find-node", map[string]interface{}{
+				c := p.newRPCCommand("find-node", map[string]interface{}{
 					"id": string(findid.Bytes()),
 				})
 				go f(node.ID, c)
@@ -264,7 +265,7 @@ func (p *DHT) LoadValue(key string) *string {
 		case id := <-reqch:
 			if _, ok := requested[id.Digest.String()]; !ok {
 				requested[id.Digest.String()] = struct{}{}
-				c := newRPCCommand("find-value", map[string]interface{}{
+				c := p.newRPCCommand("find-value", map[string]interface{}{
 					"key": key,
 				})
 				go f(id, keyid, c)
@@ -289,7 +290,7 @@ func (p *DHT) LoadValue(key string) *string {
 
 func (p *DHT) StoreValue(key string, value string) {
 	hash := sha1.Sum([]byte(key))
-	c := newRPCCommand("store", map[string]interface{}{
+	c := p.newRPCCommand("store", map[string]interface{}{
 		"key":   key,
 		"value": value,
 	})
@@ -317,21 +318,25 @@ func (p *DHT) GetNodeInfo(id utils.NodeID) *utils.NodeInfo {
 	return p.table.find(id)
 }
 
-func newRPCCommand(method string, args map[string]interface{}) dhtRPCCommand {
+func (p *DHT) newRPCCommand(method string, args map[string]interface{}) dhtRPCCommand {
 	id := make([]byte, 20)
 	_, err := rand.Read(id)
 	if err != nil {
 		panic(err)
 	}
 	return dhtRPCCommand{
+		Src:    p.id,
+		Net:    p.net,
 		ID:     id,
 		Method: method,
 		Args:   args,
 	}
 }
 
-func newRPCReturnCommand(id []byte, args map[string]interface{}) dhtRPCCommand {
+func (p *DHT) newRPCReturnCommand(id []byte, args map[string]interface{}) dhtRPCCommand {
 	return dhtRPCCommand{
+		Src:    p.id,
+		Net:    p.net,
 		ID:     id,
 		Method: "",
 		Args:   args,
@@ -339,8 +344,7 @@ func newRPCReturnCommand(id []byte, args map[string]interface{}) dhtRPCCommand {
 }
 
 func (p *DHT) Discover(addr net.Addr) error {
-	c := newRPCCommand("ping", nil)
-	c.Src = p.id
+	c := p.newRPCCommand("ping", nil)
 	b, err := msgpack.Marshal(c)
 	if err != nil {
 		return err
@@ -353,12 +357,11 @@ func (p *DHT) Discover(addr net.Addr) error {
 }
 
 func (p *DHT) sendPing(dst utils.NodeID) error {
-	c := newRPCCommand("ping", nil)
+	c := p.newRPCCommand("ping", nil)
 	return p.sendPacket(dst, c)
 }
 
 func (p *DHT) sendPacket(dst utils.NodeID, c dhtRPCCommand) error {
-	c.Src = p.id
 	i := p.GetNodeInfo(dst)
 	if i == nil || i.Addr == nil {
 		return errors.New("route not found")

@@ -188,18 +188,18 @@ func TestRouterGroup(t *testing.T) {
 	{
 		m, err := router2.RecvMessage()
 		if err != nil {
-			t.Errorf("router1: recvMessage() returns error")
+			t.Errorf("router2: recvMessage() returns error")
 		}
 		if m.Node.Digest.Cmp(router3.key.Digest()) != 0 {
-			t.Errorf("router1: wrong source id")
+			t.Errorf("router2: wrong source id")
 		}
 
 		ns := [4]byte{1, 1, 1, 2}
 		if !bytes.Equal(m.Node.NS[:], ns[:]) {
-			t.Errorf("router1: wrong namespace")
+			t.Errorf("router2: wrong namespace")
 		}
 		if string(m.Payload) != msg {
-			t.Errorf("router1: wrong message body")
+			t.Errorf("router2: wrong message body")
 		}
 	}
 }

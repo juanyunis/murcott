@@ -23,6 +23,7 @@ type Message struct {
 }
 
 type Router struct {
+	id       utils.NodeID
 	mainDht  *dht.DHT
 	groupDht map[string]*dht.DHT
 	dhtMutex sync.RWMutex
@@ -66,10 +67,11 @@ func NewRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 	id := utils.NewNodeID(ns, key.Digest())
 
 	r := Router{
+		id:       id,
 		listener: listener,
 		key:      key,
 		sessions: make(map[string]*session),
-		mainDht:  dht.NewDHT(10, id, listener.RawConn, logger),
+		mainDht:  dht.NewDHT(10, id, id, listener.RawConn, logger),
 		groupDht: make(map[string]*dht.DHT),
 
 		logger: logger,
@@ -98,7 +100,7 @@ func (p *Router) Join(group utils.NodeID) error {
 	p.dhtMutex.Lock()
 	defer p.dhtMutex.Unlock()
 	if _, ok := p.groupDht[group.String()]; !ok {
-		p.groupDht[group.String()] = dht.NewDHT(10, p.ID(), p.listener.RawConn, p.logger)
+		p.groupDht[group.String()] = dht.NewDHT(10, p.ID(), group, p.listener.RawConn, p.logger)
 		return nil
 	}
 	return errors.New("already joined")
@@ -266,7 +268,7 @@ func (p *Router) readSession(s *session) {
 		ns := utils.GlobalNamespace
 		if !bytes.Equal(pkt.Src.NS[:], ns[:]) {
 			p.dhtMutex.RLock()
-			if d, ok := p.groupDht[pkt.Src.String()]; ok {
+			if d, ok := p.groupDht[pkt.Dst.String()]; ok {
 				pkt.TTL--
 				if pkt.TTL > 0 {
 					for _, n := range d.KnownNodes() {
@@ -398,8 +400,7 @@ func (p *Router) KnownNodes() []utils.NodeInfo {
 }
 
 func (p *Router) ID() utils.NodeID {
-	ns := utils.GlobalNamespace
-	return utils.NewNodeID(ns, p.key.Digest())
+	return p.id
 }
 
 func (p *Router) Close() {
