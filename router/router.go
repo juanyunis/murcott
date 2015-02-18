@@ -104,9 +104,10 @@ func (p *Router) getGroupDht(group utils.NodeID) *dht.DHT {
 
 func (p *Router) Join(group utils.NodeID) error {
 	if p.getGroupDht(group) == nil {
+		d := dht.NewDHT(10, p.ID(), group, p.listener.RawConn, p.logger)
 		p.dhtMutex.Lock()
-		defer p.dhtMutex.Unlock()
-		p.groupDht[group] = dht.NewDHT(10, p.ID(), group, p.listener.RawConn, p.logger)
+		p.groupDht[group] = d
+		p.dhtMutex.Unlock()
 		return nil
 	}
 	return errors.New("already joined")
@@ -115,8 +116,8 @@ func (p *Router) Join(group utils.NodeID) error {
 func (p *Router) Leave(group utils.NodeID) error {
 	if p.getGroupDht(group) != nil {
 		p.dhtMutex.Lock()
-		defer p.dhtMutex.Unlock()
 		delete(p.groupDht, group)
+		p.dhtMutex.Unlock()
 		return nil
 	}
 	return errors.New("not joined")

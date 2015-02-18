@@ -80,14 +80,8 @@ func (p *DHT) ProcessPacket(b []byte, addr net.Addr) {
 	}
 
 	ns := utils.GlobalNamespace
-	if bytes.Equal(p.net.NS[:], ns[:]) {
-		if !bytes.Equal(c.Net.NS[:], ns[:]) {
-			p.groupTable.insert(utils.NodeInfo{ID: c.Net, Addr: addr})
-		}
-	} else {
-		if p.net.Digest.Cmp(c.Net.Digest) != 0 {
-			return
-		}
+	if !bytes.Equal(p.net.NS[:], ns[:]) && p.net.Digest.Cmp(c.Net.Digest) != 0 {
+		return
 	}
 
 	p.table.insert(utils.NodeInfo{ID: c.Src, Addr: addr})
