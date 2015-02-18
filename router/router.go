@@ -96,10 +96,16 @@ func (p *Router) Discover(addrs []net.UDPAddr) {
 	}
 }
 
+func (p *Router) getGroupDht(group utils.NodeID) *dht.DHT {
+	p.dhtMutex.RLock()
+	defer p.dhtMutex.RUnlock()
+	return p.groupDht[group]
+}
+
 func (p *Router) Join(group utils.NodeID) error {
-	p.dhtMutex.Lock()
-	defer p.dhtMutex.Unlock()
-	if _, ok := p.groupDht[group]; !ok {
+	if p.getGroupDht(group) == nil {
+		p.dhtMutex.Lock()
+		defer p.dhtMutex.Unlock()
 		p.groupDht[group] = dht.NewDHT(10, p.ID(), group, p.listener.RawConn, p.logger)
 		return nil
 	}
@@ -107,9 +113,9 @@ func (p *Router) Join(group utils.NodeID) error {
 }
 
 func (p *Router) Leave(group utils.NodeID) error {
-	p.dhtMutex.Lock()
-	defer p.dhtMutex.Unlock()
-	if _, ok := p.groupDht[group]; ok {
+	if p.getGroupDht(group) != nil {
+		p.dhtMutex.Lock()
+		defer p.dhtMutex.Unlock()
 		delete(p.groupDht, group)
 		return nil
 	}
@@ -265,8 +271,8 @@ func (p *Router) readSession(s *session) {
 		}
 		ns := utils.GlobalNamespace
 		if !bytes.Equal(pkt.Src.NS[:], ns[:]) {
-			p.dhtMutex.RLock()
-			if d, ok := p.groupDht[pkt.Dst]; ok {
+			d := p.getGroupDht(pkt.Dst)
+			if d != nil {
 				pkt.TTL--
 				if pkt.TTL > 0 {
 					for _, n := range d.KnownNodes() {
@@ -277,7 +283,6 @@ func (p *Router) readSession(s *session) {
 					}
 				}
 			}
-			p.dhtMutex.RUnlock()
 		}
 		if pkt.Type == "msg" {
 			id, _ := time.Now().MarshalBinary()
