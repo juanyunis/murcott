@@ -36,8 +36,7 @@ type DHT struct {
 	chmap      map[string]chan<- dhtRPCReturn
 	chmapMutex sync.Mutex
 
-	conn net.PacketConn
-
+	conn   net.PacketConn
 	logger *log.Logger
 }
 
@@ -112,6 +111,34 @@ func (p *DHT) ProcessPacket(b []byte, addr net.Addr) {
 				p.kvsMutex.Lock()
 				p.kvs[key] = val
 				p.kvsMutex.Unlock()
+			}
+		}
+
+	case "store-node":
+		p.logger.Info("%s: Receive DHT Store-node from %s", p.id.String(), c.Src.String())
+		if key, ok := c.Args["key"].(string); ok {
+			if val, ok := c.Args["value"].(string); ok {
+
+				t := newNodeTable(p.k, p.id)
+				var nodes []utils.NodeInfo
+				msgpack.Unmarshal([]byte(val), &nodes)
+				for _, n := range nodes {
+					t.insert(n)
+				}
+
+				p.kvsMutex.RLock()
+				msgpack.Unmarshal([]byte(p.kvs[key]), &nodes)
+				p.kvsMutex.RUnlock()
+				for _, n := range nodes {
+					t.insert(n)
+				}
+
+				b, err := msgpack.Marshal(t.nodes())
+				if err == nil {
+					p.kvsMutex.Lock()
+					p.kvs[key] = string(b)
+					p.kvsMutex.Unlock()
+				}
 			}
 		}
 
@@ -296,6 +323,31 @@ func (p *DHT) StoreValue(key string, value string) {
 	for _, n := range p.FindNearestNode(utils.NewNodeID(p.id.NS, hash)) {
 		p.sendPacket(n.ID, c)
 	}
+}
+
+func (p *DHT) StoreNodes(key string, nodes []utils.NodeInfo) {
+	hash := sha1.Sum([]byte(key))
+	b, err := msgpack.Marshal(nodes)
+	if err != nil {
+		return
+	}
+	c := p.newRPCCommand("store-node", map[string]interface{}{
+		"key":   key,
+		"value": string(b),
+	})
+	for _, n := range p.FindNearestNode(utils.NewNodeID(p.id.NS, hash)) {
+		p.sendPacket(n.ID, c)
+	}
+}
+
+func (p *DHT) LoadNodes(key string) []utils.NodeInfo {
+	str := p.LoadValue(key)
+	if str == nil {
+		return nil
+	}
+	var ret []utils.NodeInfo
+	msgpack.Unmarshal([]byte(*str), &ret)
+	return ret
 }
 
 func (p *DHT) AddNode(node utils.NodeInfo) {
