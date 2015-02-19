@@ -238,14 +238,14 @@ loop:
 }
 
 func (p *DHT) LoadValue(key string) *string {
-
-	p.kvsMutex.RLock()
-	if v, ok := p.kvs[key]; ok {
+	/*
+		p.kvsMutex.RLock()
+		if v, ok := p.kvs[key]; ok {
+			p.kvsMutex.RUnlock()
+			return &v
+		}
 		p.kvsMutex.RUnlock()
-		return &v
-	}
-	p.kvsMutex.RUnlock()
-
+	*/
 	hash := sha1.Sum([]byte(key))
 	keyid := utils.NewNodeID(p.id.NS, hash)
 
@@ -337,6 +337,25 @@ func (p *DHT) StoreNodes(key string, nodes []utils.NodeInfo) {
 	})
 	for _, n := range p.FindNearestNode(utils.NewNodeID(p.id.NS, hash)) {
 		p.sendPacket(n.ID, c)
+	}
+
+	t := newNodeTable(p.k, p.id)
+	for _, n := range nodes {
+		t.insert(n)
+	}
+
+	p.kvsMutex.RLock()
+	msgpack.Unmarshal([]byte(p.kvs[key]), &nodes)
+	p.kvsMutex.RUnlock()
+	for _, n := range nodes {
+		t.insert(n)
+	}
+
+	b, err = msgpack.Marshal(t.nodes())
+	if err == nil {
+		p.kvsMutex.Lock()
+		p.kvs[key] = string(b)
+		p.kvsMutex.Unlock()
 	}
 }
 

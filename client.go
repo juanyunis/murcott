@@ -319,9 +319,9 @@ func (c *Client) UnmarshalBinary(data []byte) error {
 	}
 	c.Roster = s.Roster
 
-	for _, id := range c.Roster.List() {
-		c.SendProfileRequest(id)
-	}
+	//for _, id := range c.Roster.List() {
+	//	c.SendProfileRequest(id)
+	//}
 
 	return nil
 }
