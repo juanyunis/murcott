@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -194,20 +193,10 @@ func (s *Session) commandLoop() {
 				}
 			}
 		case "/mkg":
-			if len(c) != 2 {
-				color.Printf(" -> @{Rk}ERROR:@{|} /mkg takes 1 argument\n")
-			} else {
-				ns := net.ParseIP(c[1])
-				if ns == nil || ns.To4() == nil {
-					color.Printf(" -> @{Rk}ERROR:@{|} invalid NS\n")
-				} else {
-					var ns4 utils.Namespace
-					copy(ns4[:], ns)
-					key := utils.GeneratePrivateKey()
-					id := utils.NewNodeID(ns4, key.Digest())
-					color.Printf("Group ID: @{Wk} %s @{|}\n\n", id.String())
-				}
-			}
+			key := utils.GeneratePrivateKey()
+			id := utils.NewNodeID(utils.GroupNamespace, key.Digest())
+			color.Printf("Group ID: @{Wk} %s @{|}\n\n", id.String())
+
 		case "/stat":
 			nodes := s.cli.ActiveSessions()
 			color.Printf("  * active sessions (%d) *\n", len(nodes))
@@ -248,7 +237,7 @@ func showHelp() {
  @{Kg}/chat [ID]@{|}	Start a chat with [ID]
  @{Kg}/end      @{|}	End current chat
  @{Kg}/add  [ID]@{|}	Add [ID] to roster
- @{Kg}/mkg  [NS]@{|}	Generate new group id with [NS]
+ @{Kg}/mkg      @{|}	Generate new group id
  @{Kg}/help     @{|}	Show this message
  @{Kg}/stat     @{|}	Show node status
  @{Kg}/exit     @{|}	Exit this program`)
