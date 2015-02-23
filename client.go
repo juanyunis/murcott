@@ -2,6 +2,7 @@
 package murcott
 
 import (
+	"bytes"
 	"errors"
 	"sync"
 
@@ -170,7 +171,9 @@ func (c *Client) parseMessage(rm router.Message) {
 
 	if m != nil && t.Type != "ack" {
 		c.mbuf.Push(readPair{M: m, ID: rm.Node})
-		c.sendAck(rm.Node, rm.ID)
+		if !bytes.Equal(rm.Node.NS[:], utils.GroupNamespace[:]) {
+			c.sendAck(rm.Node, rm.ID)
+		}
 	}
 }
 

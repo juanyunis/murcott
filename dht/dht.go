@@ -238,14 +238,13 @@ loop:
 }
 
 func (p *DHT) LoadValue(key string) *string {
-	/*
-		p.kvsMutex.RLock()
-		if v, ok := p.kvs[key]; ok {
-			p.kvsMutex.RUnlock()
-			return &v
-		}
+	p.kvsMutex.RLock()
+	if v, ok := p.kvs[key]; ok {
 		p.kvsMutex.RUnlock()
-	*/
+		return &v
+	}
+	p.kvsMutex.RUnlock()
+
 	hash := sha1.Sum([]byte(key))
 	keyid := utils.NewNodeID(p.id.NS, hash)
 

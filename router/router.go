@@ -4,6 +4,7 @@ package router
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
 	"sync"
@@ -217,10 +218,11 @@ func (p *Router) run() {
 					}
 				}
 			} else {
+				fmt.Printf("Route not found: %v\n", pkt.Dst)
 				p.logger.Error("Route not found: %v", pkt.Dst)
 				p.queuedPackets = append(p.queuedPackets, pkt)
 			}
-		case <-time.After(time.Second):
+		case <-time.After(time.Second * 60):
 			p.SendPing()
 			var rest []internal.Packet
 			for _, pkt := range p.queuedPackets {
@@ -281,14 +283,16 @@ func (p *Router) readSession(s *session) {
 			d := p.getGroupDht(pkt.Dst)
 			if d != nil {
 				pkt.TTL--
-				if pkt.TTL > 0 {
-					for _, n := range d.KnownNodes() {
-						sessions := p.getSessions(n.ID)
-						for _, s := range sessions {
-							s.Write(pkt)
+				/*
+					if pkt.TTL > 0 {
+						for _, n := range d.KnownNodes() {
+							sessions := p.getSessions(n.ID)
+							for _, s := range sessions {
+								s.Write(pkt)
+							}
 						}
 					}
-				}
+				*/
 			}
 		}
 		if pkt.Type == "msg" {
