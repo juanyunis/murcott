@@ -334,6 +334,7 @@ func (p *DHT) StoreNodes(key string, nodes []utils.NodeInfo) {
 		"key":   key,
 		"value": string(b),
 	})
+
 	for _, n := range p.FindNearestNode(utils.NewNodeID(p.id.NS, hash)) {
 		p.sendPacket(n.ID, c)
 	}
@@ -375,7 +376,6 @@ func (p *DHT) AddNode(node utils.NodeInfo) {
 	if p.id.Digest.Cmp(node.ID.Digest) == 0 {
 		return
 	}
-	p.table.insert(node)
 	p.sendPing(node.ID)
 }
 
