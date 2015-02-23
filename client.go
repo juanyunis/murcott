@@ -318,7 +318,7 @@ func (c *Client) UnmarshalBinary(data []byte) error {
 		return err
 	}
 	for _, n := range s.Nodes {
-		c.router.AddNode(n)
+		c.router.DscoverNode(n)
 	}
 	c.Roster = s.Roster
 

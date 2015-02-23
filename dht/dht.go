@@ -369,7 +369,7 @@ func (p *DHT) LoadNodes(key string) []utils.NodeInfo {
 	return ret
 }
 
-func (p *DHT) AddNode(node utils.NodeInfo) {
+func (p *DHT) DiscoverNode(node utils.NodeInfo) {
 	if !p.id.NS.Match(node.ID.NS) {
 		return
 	}
@@ -377,6 +377,17 @@ func (p *DHT) AddNode(node utils.NodeInfo) {
 		return
 	}
 	p.sendPing(node.ID)
+}
+
+func (p *DHT) AddNode(node utils.NodeInfo) {
+	if !p.id.NS.Match(node.ID.NS) {
+		return
+	}
+	if p.id.Digest.Cmp(node.ID.Digest) == 0 {
+		return
+	}
+	p.table.insert(node)
+	p.DiscoverNode(node)
 }
 
 func (p *DHT) KnownNodes() []utils.NodeInfo {

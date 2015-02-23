@@ -79,7 +79,7 @@ func TestDhtPing(t *testing.T) {
 		}
 	}()
 
-	dht1.Discover(node2.Addr)
+	dht1.AddNode(node2)
 
 	time.Sleep(time.Millisecond * 100)
 
@@ -95,7 +95,7 @@ func TestDhtPing(t *testing.T) {
 func TestDhtGroup(t *testing.T) {
 	logger := log.NewLogger()
 
-	n := 5
+	n := 20
 	dhtmap := make(map[string]*DHT)
 	idary := make([]utils.NodeInfo, n)
 
@@ -132,8 +132,7 @@ func TestDhtGroup(t *testing.T) {
 	rootDht := dhtmap[rootNode.ID.String()]
 
 	for _, d := range dhtmap {
-		d.Discover(rootNode.Addr)
-		time.Sleep(time.Millisecond * 10)
+		d.AddNode(rootNode)
 		d.FindNearestNode(d.id)
 	}
 
