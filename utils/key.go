@@ -167,6 +167,9 @@ func (p *PrivateKey) UnmarshalText(text []byte) error {
 }
 
 func (p *PublicKey) Verify(data []byte, sign *Signature) bool {
+	if p.IsZero() {
+		return false
+	}
 	key := ecdsa.PublicKey{
 		Curve: elliptic.P256(),
 		X:     p.x,
