@@ -391,6 +391,15 @@ func (p *Router) AddNode(info utils.NodeInfo) {
 	}
 }
 
+func (p *Router) DiscoverNode(info utils.NodeInfo) {
+	p.dhtMutex.RLock()
+	defer p.dhtMutex.RUnlock()
+	p.mainDht.AddNode(info)
+	for _, d := range p.groupDht {
+		d.DiscoverNode(info)
+	}
+}
+
 func (p *Router) ActiveSessions() []utils.NodeInfo {
 	var nodes []utils.NodeInfo
 	p.sessionMutex.RLock()
