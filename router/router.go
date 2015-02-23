@@ -3,6 +3,7 @@ package router
 
 import (
 	"bytes"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"net"
@@ -286,16 +287,14 @@ func (p *Router) readSession(s *session) {
 			d := p.getGroupDht(pkt.Dst)
 			if d != nil {
 				pkt.TTL--
-				/*
-					if pkt.TTL > 0 {
-						for _, n := range d.KnownNodes() {
-							sessions := p.getSessions(n.ID)
-							for _, s := range sessions {
-								s.Write(pkt)
-							}
+				if pkt.TTL > 0 {
+					for _, n := range d.KnownNodes() {
+						sessions := p.getSessions(n.ID)
+						for _, s := range sessions {
+							s.Write(pkt)
 						}
 					}
-				*/
+				}
 			}
 		}
 		if pkt.Type == "msg" {
@@ -379,11 +378,14 @@ func (p *Router) getDirectSession(id utils.NodeID) *session {
 }
 
 func (p *Router) makePacket(dst utils.NodeID, typ string, payload []byte) (internal.Packet, error) {
+	var id [20]byte
+	rand.Read(id[:])
 	return internal.Packet{
 		Dst:     dst,
 		Src:     utils.NewNodeID(dst.NS, p.key.Digest()),
 		Type:    typ,
 		Payload: payload,
+		ID:      id[:],
 		TTL:     3,
 	}, nil
 }
