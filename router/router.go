@@ -278,6 +278,9 @@ func (p *Router) readSession(s *session) {
 			p.removeSession(s)
 			return
 		}
+		if pkt.Src.Match(p.id) {
+			return
+		}
 		ns := utils.GlobalNamespace
 		if !bytes.Equal(pkt.Src.NS[:], ns[:]) {
 			d := p.getGroupDht(pkt.Dst)
@@ -323,6 +326,9 @@ func (p *Router) getSessions(id utils.NodeID) []*session {
 }
 
 func (p *Router) getDirectSession(id utils.NodeID) *session {
+	if id.Match(p.id) {
+		return nil
+	}
 	p.sessionMutex.RLock()
 	if s, ok := p.sessions[id]; ok {
 		p.sessionMutex.RUnlock()
@@ -394,7 +400,7 @@ func (p *Router) AddNode(info utils.NodeInfo) {
 func (p *Router) DiscoverNode(info utils.NodeInfo) {
 	p.dhtMutex.RLock()
 	defer p.dhtMutex.RUnlock()
-	p.mainDht.AddNode(info)
+	p.mainDht.DiscoverNode(info)
 	for _, d := range p.groupDht {
 		d.DiscoverNode(info)
 	}

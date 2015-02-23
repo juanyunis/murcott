@@ -93,6 +93,10 @@ func (id NodeID) String() string {
 	return string(base58.EncodeBig(nil, &i))
 }
 
+func (d NodeID) Match(n NodeID) bool {
+	return d.NS.Match(n.NS) && d.Digest.Cmp(n.Digest) == 0
+}
+
 func (d PublicKeyDigest) Xor(n PublicKeyDigest) PublicKeyDigest {
 	var b, c big.Int
 	b.SetBytes(d[:])
