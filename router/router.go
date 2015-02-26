@@ -316,6 +316,9 @@ func (p *Router) getSessions(id utils.NodeID) []*session {
 		}
 	} else {
 		if d, ok := p.groupDht[id]; ok {
+			for _, n := range p.mainDht.LoadNodes(id.String()) {
+				d.Discover(n.Addr)
+			}
 			for _, n := range d.KnownNodes() {
 				s := p.getDirectSession(n.ID)
 				if s != nil {
