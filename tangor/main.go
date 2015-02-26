@@ -143,10 +143,10 @@ func (s *Session) commandLoop() {
 			}
 			if msg, ok := m.(murcott.ChatMessage); ok {
 				/*
-				if chatID == nil {
-					chatID = &src
-					color.Printf("\n -> Start a chat with @{Wk} %s @{|}\n\n", src.String())
-				}
+					if chatID == nil {
+						chatID = &src
+						color.Printf("\n -> Start a chat with @{Wk} %s @{|}\n\n", src.String())
+					}
 				*/
 				color.Printf("\r* @{Wk}%s@{|} %s\n", src.String()[:6], msg.Text())
 				fmt.Print("* ")

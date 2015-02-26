@@ -224,7 +224,7 @@ func (p *Router) run() {
 				p.logger.Error("Route not found: %v", pkt.Dst)
 				p.queuedPackets = append(p.queuedPackets, pkt)
 			}
-		case <-time.After(time.Second * 60):
+		case <-time.After(time.Second * 5):
 			p.SendPing()
 			var rest []internal.Packet
 			for _, pkt := range p.queuedPackets {
@@ -250,7 +250,6 @@ func (p *Router) run() {
 				}
 			}
 			p.queuedPackets = rest
-
 		case <-p.exit:
 			return
 		}
@@ -362,7 +361,7 @@ func (p *Router) getDirectSession(id utils.NodeID) *session {
 		return nil
 	}
 
-	conn, err := utp.DialUTP("utp", nil, addr)
+	conn, err := utp.DialUTPTimeout("utp", nil, addr, 100*time.Millisecond)
 	if err != nil {
 		p.logger.Error("%v", err)
 		return nil
