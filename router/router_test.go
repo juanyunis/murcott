@@ -1,7 +1,6 @@
 package router
 
 import (
-	"bytes"
 	"net"
 	"testing"
 	"time"
@@ -175,10 +174,6 @@ func TestRouterGroup(t *testing.T) {
 		if m.Node.Digest.Cmp(router3.key.Digest()) != 0 {
 			t.Errorf("router1: wrong source id")
 		}
-
-		if !bytes.Equal(m.Node.NS[:], utils.GroupNamespace[:]) {
-			t.Errorf("router1: wrong namespace")
-		}
 		if string(m.Payload) != msg {
 			t.Errorf("router1: wrong message body")
 		}
@@ -191,10 +186,6 @@ func TestRouterGroup(t *testing.T) {
 		}
 		if m.Node.Digest.Cmp(router3.key.Digest()) != 0 {
 			t.Errorf("router2: wrong source id")
-		}
-
-		if !bytes.Equal(m.Node.NS[:], utils.GroupNamespace[:]) {
-			t.Errorf("router2: wrong namespace")
 		}
 		if string(m.Payload) != msg {
 			t.Errorf("router2: wrong message body")

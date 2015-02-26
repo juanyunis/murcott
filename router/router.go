@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"crypto/rand"
 	"errors"
-	"fmt"
 	"net"
 	"strconv"
 	"sync"
@@ -222,7 +221,6 @@ func (p *Router) run() {
 					}
 				}
 			} else {
-				fmt.Printf("Route not found: %v\n", pkt.Dst)
 				p.logger.Error("Route not found: %v", pkt.Dst)
 				p.queuedPackets = append(p.queuedPackets, pkt)
 			}
@@ -386,7 +384,7 @@ func (p *Router) makePacket(dst utils.NodeID, typ string, payload []byte) (inter
 	rand.Read(id[:])
 	return internal.Packet{
 		Dst:     dst,
-		Src:     utils.NewNodeID(dst.NS, p.key.Digest()),
+		Src:     p.id,
 		Type:    typ,
 		Payload: payload,
 		ID:      id,
