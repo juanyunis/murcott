@@ -297,6 +297,8 @@ func (p *Router) readSession(s *session) {
 				if pkt.TTL > 0 {
 					p.send <- pkt
 				}
+			} else {
+				continue
 			}
 		}
 		if pkt.Type == "msg" {

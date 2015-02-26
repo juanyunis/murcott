@@ -142,10 +142,12 @@ func (s *Session) commandLoop() {
 				return
 			}
 			if msg, ok := m.(murcott.ChatMessage); ok {
+				/*
 				if chatID == nil {
 					chatID = &src
 					color.Printf("\n -> Start a chat with @{Wk} %s @{|}\n\n", src.String())
 				}
+				*/
 				color.Printf("\r* @{Wk}%s@{|} %s\n", src.String()[:6], msg.Text())
 				fmt.Print("* ")
 			}
@@ -212,6 +214,7 @@ func (s *Session) commandLoop() {
 		case "/end":
 			if chatID != nil {
 				color.Printf(" -> End current chat\n")
+				s.cli.Leave(*chatID)
 				chatID = nil
 			}
 		case "/exit", "/quit":
