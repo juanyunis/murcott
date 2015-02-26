@@ -36,7 +36,8 @@ type Router struct {
 	sessions     map[utils.NodeID]*session
 	sessionMutex sync.RWMutex
 
-	queuedPackets []internal.Packet
+	queuedPackets   []internal.Packet
+	receivedPackets map[[20]byte]int
 
 	logger *log.Logger
 	recv   chan Message
@@ -75,6 +76,8 @@ func NewRouter(key *utils.PrivateKey, logger *log.Logger, config utils.Config) (
 		sessions: make(map[utils.NodeID]*session),
 		mainDht:  dht.NewDHT(10, id, id, listener.RawConn, logger),
 		groupDht: make(map[utils.NodeID]*dht.DHT),
+
+		receivedPackets: make(map[[20]byte]int),
 
 		logger: logger,
 		recv:   make(chan Message, 100),
@@ -282,18 +285,19 @@ func (p *Router) readSession(s *session) {
 		if pkt.Src.Match(p.id) {
 			return
 		}
+		d := pkt.Digest()
+		if _, ok := p.receivedPackets[d]; ok {
+			continue
+		} else {
+			p.receivedPackets[d] = 0
+		}
 		ns := utils.GlobalNamespace
 		if !bytes.Equal(pkt.Src.NS[:], ns[:]) {
 			d := p.getGroupDht(pkt.Dst)
 			if d != nil {
 				pkt.TTL--
 				if pkt.TTL > 0 {
-					for _, n := range d.KnownNodes() {
-						sessions := p.getSessions(n.ID)
-						for _, s := range sessions {
-							s.Write(pkt)
-						}
-					}
+					p.send <- pkt
 				}
 			}
 		}
@@ -385,7 +389,7 @@ func (p *Router) makePacket(dst utils.NodeID, typ string, payload []byte) (inter
 		Src:     utils.NewNodeID(dst.NS, p.key.Digest()),
 		Type:    typ,
 		Payload: payload,
-		ID:      id[:],
+		ID:      id,
 		TTL:     3,
 	}, nil
 }

@@ -2,6 +2,7 @@
 package internal
 
 import (
+	"crypto/sha1"
 	"errors"
 
 	"github.com/h2so5/murcott/utils"
@@ -13,7 +14,7 @@ type Packet struct {
 	Src     utils.NodeID    `msgpack:"src"`
 	Type    string          `msgpack:"type"`
 	Payload []byte          `msgpack:"payload"`
-	ID      []byte          `msgpack:"id"`
+	ID      [20]byte        `msgpack:"id"`
 	S       utils.Signature `msgpack:"sign"`
 	TTL     uint8           `msgpack:"ttl"`
 }
@@ -29,6 +30,10 @@ func (p *Packet) Serialize() []byte {
 
 	data, _ := msgpack.Marshal(ary)
 	return data
+}
+
+func (p *Packet) Digest() [20]byte {
+	return sha1.Sum(p.Serialize())
 }
 
 func (p *Packet) Sign(key *utils.PrivateKey) error {
