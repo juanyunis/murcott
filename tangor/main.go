@@ -148,7 +148,8 @@ func (s *Session) commandLoop() {
 						color.Printf("\n -> Start a chat with @{Wk} %s @{|}\n\n", src.String())
 					}
 				*/
-				color.Printf("\r* @{Wk}%s@{|} %s\n", src.String()[:6], msg.Text())
+				str := src.String()
+				color.Printf("\r* @{Wk}%s@{|} %s\n", str[len(str)-8:], msg.Text())
 				fmt.Print("* ")
 			}
 		}
