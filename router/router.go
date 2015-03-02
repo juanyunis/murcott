@@ -431,12 +431,20 @@ func (p *Router) ActiveSessions() []utils.NodeInfo {
 }
 
 func (p *Router) KnownNodes() []utils.NodeInfo {
-	var nodes []utils.NodeInfo
-	nodes = append(nodes, p.mainDht.KnownNodes()...)
-	for _, d := range p.groupDht {
-		nodes = append(nodes, d.KnownNodes()...)
+	nodes := make(map[utils.NodeID]utils.NodeInfo)
+	for _, n := range p.mainDht.KnownNodes() {
+		nodes[n.ID] = n
 	}
-	return nodes
+	for _, d := range p.groupDht {
+		for _, n := range d.KnownNodes() {
+			nodes[n.ID] = n
+		}
+	}
+	list := make([]utils.NodeInfo, 0, len(nodes))
+	for _, n := range nodes {
+		list = append(list, n)
+	}
+	return list
 }
 
 func (p *Router) ID() utils.NodeID {
