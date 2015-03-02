@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -201,6 +202,7 @@ func (s *Session) commandLoop() {
 			color.Printf("Group ID: @{Wk} %s @{|}\n\n", id.String())
 
 		case "/stat":
+			color.Printf("  * NumGoroutine() = %d\n", runtime.NumGoroutine())
 			nodes := s.cli.ActiveSessions()
 			color.Printf("  * active sessions (%d) *\n", len(nodes))
 			for _, n := range nodes {
