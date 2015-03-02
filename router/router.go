@@ -110,7 +110,9 @@ func (p *Router) Join(group utils.NodeID) error {
 	if p.getGroupDht(group) == nil {
 		d := dht.NewDHT(10, p.ID(), group, p.listener.RawConn, p.logger)
 		for _, n := range p.mainDht.LoadNodes(group.String()) {
-			d.Discover(n.Addr)
+			if !n.ID.Match(p.id) {
+				d.Discover(n.Addr)
+			}
 		}
 		p.dhtMutex.Lock()
 		p.groupDht[group] = d
@@ -317,7 +319,9 @@ func (p *Router) getSessions(id utils.NodeID) []*session {
 	} else {
 		if d, ok := p.groupDht[id]; ok {
 			for _, n := range p.mainDht.LoadNodes(id.String()) {
-				d.Discover(n.Addr)
+				if !n.ID.Match(p.id) {
+					d.Discover(n.Addr)
+				}
 			}
 			for _, n := range d.KnownNodes() {
 				s := p.getDirectSession(n.ID)

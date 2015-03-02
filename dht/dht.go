@@ -83,6 +83,10 @@ func (p *DHT) ProcessPacket(b []byte, addr net.Addr) {
 		return
 	}
 
+	if p.id.Match(c.Src) {
+		return
+	}
+
 	p.table.insert(utils.NodeInfo{ID: c.Src, Addr: addr})
 
 	switch c.Method {
