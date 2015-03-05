@@ -243,7 +243,7 @@ func (p *Router) run() {
 						if err != nil {
 							p.logger.Error("Remove session(%s): %v", pkt.Dst.String(), err)
 							p.removeSession(s)
-							p.queuedPackets = append(p.queuedPackets, pkt)
+							rest = append(rest, pkt)
 						}
 					}
 				} else {
@@ -370,7 +370,7 @@ func (p *Router) getDirectSession(id utils.NodeID) *session {
 
 	conn, err := utp.DialUTPTimeout("utp", nil, addr, 100*time.Millisecond)
 	if err != nil {
-		p.logger.Error("%v", err)
+		p.logger.Error("%v %v", addr, err)
 		return nil
 	}
 
