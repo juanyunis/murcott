@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/h2so5/murcott/internal"
@@ -15,11 +16,12 @@ import (
 )
 
 type session struct {
-	conn net.Conn
-	r    io.Reader
-	w    io.Writer
-	rkey *utils.PublicKey
-	lkey *utils.PrivateKey
+	conn   net.Conn
+	r      io.Reader
+	w      io.Writer
+	rkey   *utils.PublicKey
+	lkey   *utils.PrivateKey
+	wmutex sync.Mutex
 }
 
 func newSesion(conn net.Conn, lkey *utils.PrivateKey) (*session, error) {
@@ -72,12 +74,18 @@ func (s *session) Read() (internal.Packet, error) {
 }
 
 func (s *session) Write(p internal.Packet) error {
+	s.wmutex.Lock()
+	defer s.wmutex.Unlock()
 	err := p.Sign(s.lkey)
 	if err != nil {
 		return err
 	}
 	d := msgpack.NewEncoder(s.w)
 	return d.Encode(p)
+}
+
+func (s *session) Close() error {
+	return s.conn.Close()
 }
 
 func (s *session) verifyPubkey() error {

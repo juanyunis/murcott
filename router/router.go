@@ -273,6 +273,7 @@ func (p *Router) addSession(s *session) {
 func (p *Router) removeSession(s *session) {
 	p.sessionMutex.Lock()
 	defer p.sessionMutex.Unlock()
+	s.Close()
 	delete(p.sessions, s.ID())
 }
 
