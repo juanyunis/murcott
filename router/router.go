@@ -207,6 +207,9 @@ func (p *Router) run() {
 		}
 	}()
 
+	tick := time.NewTicker(time.Second * 5)
+	defer tick.Stop()
+
 	for {
 		select {
 		case s := <-acceptch:
@@ -226,7 +229,7 @@ func (p *Router) run() {
 				p.logger.Error("Route not found: %v", pkt.Dst)
 				p.queuedPackets = append(p.queuedPackets, pkt)
 			}
-		case <-time.After(time.Second * 5):
+		case <-tick.C:
 			p.SendPing()
 			var rest []internal.Packet
 			for _, pkt := range p.queuedPackets {

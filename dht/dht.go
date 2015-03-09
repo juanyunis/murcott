@@ -475,10 +475,14 @@ func (p *DHT) sendAndWaitPacket(dst utils.NodeID, c dhtRPCCommand) (dhtRPCReturn
 	}()
 
 	p.sendPacket(dst, c)
+
+	t := time.NewTimer(time.Second)
+	defer t.Stop()
+
 	select {
 	case r := <-ch:
 		return r, nil
-	case <-time.After(time.Second):
+	case <-t.C:
 		return dhtRPCReturn{}, errors.New("timeout")
 	}
 }
