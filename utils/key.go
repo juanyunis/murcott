@@ -170,6 +170,12 @@ func (p *PublicKey) Verify(data []byte, sign *Signature) bool {
 	if p.IsZero() {
 		return false
 	}
+	if sign == nil || sign.r == nil ||  sign.s == nil {
+		return false
+	}
+	if p.x == nil || p.y == nil {
+		return false
+	}
 	key := ecdsa.PublicKey{
 		Curve: elliptic.P256(),
 		X:     p.x,
