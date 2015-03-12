@@ -286,7 +286,7 @@ func (p *Router) readSession(s *session) {
 			return
 		}
 		if pkt.Src.Match(p.id) {
-			return
+			continue
 		}
 		d := pkt.Digest()
 		if _, ok := p.receivedPackets[d]; ok {
@@ -300,7 +300,7 @@ func (p *Router) readSession(s *session) {
 			if d != nil {
 				pkt.TTL--
 				if pkt.TTL > 0 {
-					//p.send <- pkt
+					p.send <- pkt
 				}
 			} else {
 				continue
