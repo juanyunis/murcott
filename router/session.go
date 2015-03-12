@@ -80,8 +80,12 @@ func (s *session) Write(p internal.Packet) error {
 	if err != nil {
 		return err
 	}
-	d := msgpack.NewEncoder(s.w)
-	return d.Encode(p)
+	b, err := msgpack.Marshal(p)
+	if err != nil {
+		return err
+	}
+	_, err = s.w.Write(b)
+	return err
 }
 
 func (s *session) Close() error {
