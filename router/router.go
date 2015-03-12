@@ -294,19 +294,19 @@ func (p *Router) readSession(s *session) {
 		} else {
 			p.receivedPackets[d] = 0
 		}
-		ns := utils.GlobalNamespace
-		if !bytes.Equal(pkt.Src.NS[:], ns[:]) {
+		group := bytes.Equal(pkt.Dst.NS[:], utils.GroupNamespace[:])
+		if group {
 			d := p.getGroupDht(pkt.Dst)
 			if d != nil {
 				pkt.TTL--
 				if pkt.TTL > 0 {
-					p.send <- pkt
+					//p.send <- pkt
 				}
 			} else {
 				continue
 			}
 		}
-		if pkt.Type == "msg" {
+		if pkt.Type == "msg" && (!group || p.getGroupDht(pkt.Dst) != nil) {
 			id, _ := time.Now().MarshalBinary()
 			p.recv <- Message{Node: pkt.Src, Payload: pkt.Payload, ID: id}
 		}
