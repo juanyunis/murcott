@@ -6,6 +6,8 @@ import (
 	"github.com/h2so5/murcott/utils"
 )
 
+const bucketSize = 160
+
 type nodeTable struct {
 	buckets [][]utils.NodeInfo
 	selfid  utils.NodeID
@@ -14,7 +16,7 @@ type nodeTable struct {
 }
 
 func newNodeTable(k int, id utils.NodeID) nodeTable {
-	buckets := make([][]utils.NodeInfo, 160)
+	buckets := make([][]utils.NodeInfo, bucketSize)
 
 	return nodeTable{
 		buckets: buckets,
@@ -63,6 +65,30 @@ func (p *nodeTable) nodes() []utils.NodeInfo {
 	return i
 }
 
+func (p *nodeTable) nextNodes() []utils.NodeInfo {
+	var nodes []utils.NodeInfo
+	for i := 0; i < bucketSize; i++ {
+		for _, n := range p.buckets[i] {
+			if (n.ID.Digest.Cmp(p.selfid.Digest) > 0) {
+				nodes = append(nodes, n)
+			}
+		}
+	}
+	return nodes
+}
+
+func (p *nodeTable) prevNodes() []utils.NodeInfo {
+	var nodes []utils.NodeInfo
+	for i := 0; i < bucketSize; i++ {
+		for _, n := range p.buckets[i] {
+			if (n.ID.Digest.Cmp(p.selfid.Digest) < 0) {
+				nodes = append(nodes, n)
+			}
+		}
+	}
+	return nodes
+}
+
 func (p *nodeTable) nearestNodes(id utils.NodeID) []utils.NodeInfo {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
@@ -72,9 +98,9 @@ func (p *nodeTable) nearestNodes(id utils.NodeID) []utils.NodeInfo {
 	if len(n) > p.k {
 		return n[len(n)-p.k:]
 	}
-	for i := 0; i < 160; i++ {
+	for i := 0; i < bucketSize; i++ {
 		rb := b + i
-		if rb < 160 {
+		if rb < bucketSize {
 			n = append(n, p.buckets[rb]...)
 		}
 		lb := b - i
