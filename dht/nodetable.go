@@ -65,25 +65,21 @@ func (p *nodeTable) nodes() []utils.NodeInfo {
 	return i
 }
 
-func (p *nodeTable) nextNodes() []utils.NodeInfo {
+func (p *nodeTable) fingerNodes() []utils.NodeInfo {
 	var nodes []utils.NodeInfo
-	for i := 0; i < bucketSize; i++ {
+	i := 0
+loop:
+	for ; i < bucketSize; i++ {
 		for _, n := range p.buckets[i] {
-			if (n.ID.Digest.Cmp(p.selfid.Digest) > 0) {
-				nodes = append(nodes, n)
+			nodes = append(nodes, n)
+			if len(nodes) >= p.k {
+				break loop
 			}
 		}
 	}
-	return nodes
-}
-
-func (p *nodeTable) prevNodes() []utils.NodeInfo {
-	var nodes []utils.NodeInfo
-	for i := 0; i < bucketSize; i++ {
-		for _, n := range p.buckets[i] {
-			if (n.ID.Digest.Cmp(p.selfid.Digest) < 0) {
-				nodes = append(nodes, n)
-			}
+	for ; i < bucketSize; i++ {
+		if len(p.buckets[i]) > 0 {
+			nodes = append(nodes, p.buckets[i][0])
 		}
 	}
 	return nodes

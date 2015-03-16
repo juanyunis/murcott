@@ -398,6 +398,10 @@ func (p *DHT) KnownNodes() []utils.NodeInfo {
 	return p.table.nodes()
 }
 
+func (p *DHT) FingerNodes() []utils.NodeInfo {
+	return p.table.fingerNodes()
+}
+
 func (p *DHT) GetNodeInfo(id utils.NodeID) *utils.NodeInfo {
 	return p.table.find(id)
 }

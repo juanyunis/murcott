@@ -327,7 +327,7 @@ func (p *Router) getSessions(id utils.NodeID) []*session {
 					d.Discover(n.Addr)
 				}
 			}
-			for _, n := range d.KnownNodes() {
+			for _, n := range d.FingerNodes() {
 				s := p.getDirectSession(n.ID)
 				if s != nil {
 					sessions = append(sessions, s)
