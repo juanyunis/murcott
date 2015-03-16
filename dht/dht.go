@@ -95,7 +95,7 @@ func (p *DHT) ProcessPacket(b []byte, addr net.Addr) {
 		p.sendPacket(c.Src, p.newRPCReturnCommand(c.ID, nil))
 
 	case "find-node":
-		p.logger.Info("%s: Receive DHT Find-Node from %s", p.id.String(), c.Src.String())
+		p.logger.Info("%s: Receive DHT Find-Node from %s", p.net.String(), c.Src.String())
 		if id, ok := c.Args["id"].(string); ok {
 			args := map[string]interface{}{}
 			nid, err := utils.NewNodeIDFromBytes([]byte(id))
@@ -428,12 +428,20 @@ func (p *DHT) newRPCReturnCommand(id []byte, args map[string]interface{}) dhtRPC
 }
 
 func (p *DHT) Discover(addr net.Addr) error {
+	udp, err := net.ResolveUDPAddr(addr.Network(), addr.String())
+	if err != nil {
+		return err
+	}
+	if bytes.Equal(udp.IP, net.IPv6zero) {
+		udp.IP = net.IPv6loopback
+	}
 	c := p.newRPCCommand("ping", nil)
 	b, err := msgpack.Marshal(c)
 	if err != nil {
 		return err
 	}
-	_, err = p.conn.WriteTo(b, addr)
+	_, err = p.conn.WriteTo(b, udp)
+	p.logger.Info("Discover: %v %v", addr, err)
 	if err != nil {
 		return err
 	}
