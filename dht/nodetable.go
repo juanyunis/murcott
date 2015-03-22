@@ -66,6 +66,9 @@ func (p *nodeTable) nodes() []utils.NodeInfo {
 }
 
 func (p *nodeTable) fingerNodes() []utils.NodeInfo {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
 	var nodes []utils.NodeInfo
 	i := 0
 loop:
