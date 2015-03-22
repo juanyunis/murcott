@@ -13,6 +13,7 @@ import (
 
 	"github.com/h2so5/murcott"
 	"github.com/h2so5/murcott/utils"
+	"github.com/skratchdot/open-golang/open"
 	"github.com/wsxiaoys/terminal/color"
 )
 
@@ -23,6 +24,7 @@ func main() {
 	}
 
 	keyfile := flag.String("i", path+"/id_dsa", "Identity file")
+	web := flag.Bool("web", false, "Open web browser")
 	flag.Parse()
 
 	fmt.Println()
@@ -48,6 +50,11 @@ func main() {
 	data, err := ioutil.ReadFile(filename)
 	if err == nil {
 		client.UnmarshalBinary(data)
+	}
+
+	if *web {
+		go webui()
+		open.Run("http://localhost:3000")
 	}
 
 	exit := make(chan int)
