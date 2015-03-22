@@ -15,6 +15,7 @@ import (
 	"github.com/h2so5/murcott/utils"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/wsxiaoys/terminal/color"
+	"gopkg.in/yaml.v2"
 )
 
 func main() {
@@ -23,13 +24,12 @@ func main() {
 		path = os.Getenv("HOME") + "/.tangor"
 	}
 
+	config := getConfig(path)
 	keyfile := flag.String("i", path+"/id_dsa", "Identity file")
 	web := flag.Bool("web", false, "Open web browser")
 	flag.Parse()
 
-	fmt.Println()
-	color.Print("@{Gk} @{Yk}  tangor  @{Gk} @{|}\n")
-	fmt.Println()
+	color.Print("\n@{Gk} @{Yk}  tangor  @{Gk} @{|}\n\n")
 
 	key, err := getKey(*keyfile)
 	if err != nil {
@@ -40,7 +40,7 @@ func main() {
 	id := utils.NewNodeID(utils.GlobalNamespace, key.Digest())
 	color.Printf("Your ID: @{Wk} %s @{|}\n\n", id.String())
 
-	client, err := murcott.NewClient(key, utils.DefaultConfig)
+	client, err := murcott.NewClient(key, config)
 	if err != nil {
 		panic(err)
 	}
@@ -75,6 +75,21 @@ func main() {
 	s.commandLoop()
 	s.save(filename)
 	close(exit)
+}
+
+func getConfig(path string) utils.Config {
+	config := utils.DefaultConfig
+	filename := path + "/config.yml"
+	data, err := ioutil.ReadFile(filename)
+	if err == nil {
+		yaml.Unmarshal(data, &config)
+	} else {
+		data, err := yaml.Marshal(config)
+		if err == nil {
+			ioutil.WriteFile(filename, data, 0644)
+		}
+	}
+	return config
 }
 
 func getKey(keyfile string) (*utils.PrivateKey, error) {

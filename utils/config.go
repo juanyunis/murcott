@@ -8,8 +8,8 @@ import (
 )
 
 type Config struct {
-	P string
-	B []string
+	P string   `yaml:"port"`
+	B []string `yaml:"bootstrap"`
 }
 
 func (c Config) Ports() []int {
