@@ -6,6 +6,6 @@ WORKDIR /go/src/github.com/h2so5/murcott/tangor
 
 RUN go get . ...
 
-RUN go build -o tangor main.go
+RUN go build -o tangor *.go
 
 ENTRYPOINT ./tangor

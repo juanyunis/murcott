@@ -7,4 +7,4 @@ install:
 script:
  - go test ./... -v
  - go test -v -race ./...
- - go build tangor/main.go
+ - go build tangor/*.go
