@@ -123,17 +123,24 @@ func (p *DHT) ProcessPacket(b []byte, addr net.Addr) {
 		if key, ok := c.Args["key"].(string); ok {
 			if val, ok := c.Args["value"].(string); ok {
 
-				t := newNodeTable(p.k, p.id)
 				var nodes []utils.NodeInfo
-				msgpack.Unmarshal([]byte(val), &nodes)
-				for _, n := range nodes {
-					t.insert(n)
-				}
+				t := newNodeTable(p.k, p.id)
 
 				p.kvsMutex.RLock()
 				msgpack.Unmarshal([]byte(p.kvs[key]), &nodes)
 				p.kvsMutex.RUnlock()
 				for _, n := range nodes {
+					t.insert(n)
+				}
+
+				msgpack.Unmarshal([]byte(val), &nodes)
+				for _, n := range nodes {
+				    host, port, _ := net.SplitHostPort(n.Addr.String())
+				    if !net.ParseIP(host).IsGlobalUnicast() {
+				       host, _, _ := net.SplitHostPort(addr.String())
+				       global, _ := net.ResolveUDPAddr(n.Addr.Network(), net.JoinHostPort(host, port))
+				       n.Addr = global
+				    }
 					t.insert(n)
 				}
 
