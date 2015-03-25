@@ -25,11 +25,17 @@ func main() {
 	}
 
 	config := getConfig(path)
+
 	keyfile := flag.String("i", path+"/id_dsa", "Identity file")
+	bootstrap := flag.String("b", "", "Additional bootstrap node")
 	web := flag.Bool("web", false, "Open web browser")
 	flag.Parse()
 
 	color.Print("\n@{Gk} @{Yk}  tangor  @{Gk} @{|}\n\n")
+
+	if len(*bootstrap) > 0 {
+		config.B = append(config.B, *bootstrap)
+	}
 
 	key, err := getKey(*keyfile)
 	if err != nil {
