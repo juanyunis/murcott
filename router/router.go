@@ -207,7 +207,7 @@ func (p *Router) run() {
 		}
 	}()
 
-	tick := time.NewTicker(time.Second * 5)
+	tick := time.NewTicker(time.Second * 1)
 	defer tick.Stop()
 
 	for {
